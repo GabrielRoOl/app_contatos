@@ -1,0 +1,716 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Contatos — Lista</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap">
+<style>
+body{margin:0}
+button,input{font-family:inherit}
+input::placeholder{color:rgba(255,255,255,.55)}
+input:focus{outline:2px solid rgba(255,255,255,.85);outline-offset:1px}
+button{cursor:pointer}
+button:disabled{cursor:default}
+*{scrollbar-width:none;-ms-overflow-style:none}
+*::-webkit-scrollbar{display:none;width:0;height:0}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; display: flex; flex-direction: column; font-family: Manrope, system-ui, sans-serif; color: #ffffff; background: {{c5}}">
+
+  <header style="display: flex; flex-direction: column; gap: 14px; padding: {{hdrPad}} 20px 14px 20px; background: {{c5}}; box-shadow: {{hdrShadow}}">
+    <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px">
+      <div style="display: flex; flex-direction: column; gap: 4px">
+        <h1 style="margin: 0; font-size: {{h1Size}}; font-weight: 800; letter-spacing: -0.02em">Contatos</h1>
+        <p style="margin: 0; font-size: 13px; font-weight: 500; color: rgba(255,255,255,0.72)">{{totalLabel}} · {{okCount}} ok · {{noCount}} não</p>
+      </div>
+      <button type="button" onClick="{{openForm}}" style="height: 44px; padding: 0 16px 0 12px; border: 0; border-radius: 22px; display: flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 700; color: #ffffff; background: {{c1}}">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
+        Adicionar
+      </button>
+    </div>
+
+    <sc-if value="{{collapsed}}" hint-placeholder-val="{{ false }}">
+      <button type="button" onClick="{{expandFilters}}" aria-label="Mostrar filtros: {{filtSummary}}" style="height: 44px; padding: 0 14px; border: 0; border-radius: 12px; display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 700; color: #ffffff; background: {{c4}}">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"></path><circle cx="16" cy="7" r="2"></circle><circle cx="10" cy="17" r="2"></circle></svg>
+        <span style="flex: 1; min-width: 0; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{filtSummary}}</span>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg>
+      </button>
+    </sc-if>
+
+    <sc-if value="{{showFilters}}" hint-placeholder-val="{{ true }}">
+    <div style="display: flex; flex-direction: column; gap: 14px">
+    <div role="group" aria-label="Agrupar por" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; padding: 4px; border-radius: 14px; background: {{c4}}">
+      <sc-for list="{{segs}}" as="sg" hint-placeholder-count="3">
+        <button type="button" onClick="{{sg.pick}}" aria-pressed="{{sg.on}}" style="height: 40px; border: 0; border-radius: 10px; font-size: 14px; font-weight: 700; color: {{sg.fg}}; background: {{sg.bg}}">{{sg.label}}</button>
+      </sc-for>
+    </div>
+
+    <div style="display: flex; gap: 8px">
+      <button type="button" onClick="{{toggleFilter}}" aria-expanded="{{filterOpen}}" style="flex: 1; min-width: 0; height: 44px; padding: 0 14px; border-radius: 12px; display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 700; color: #ffffff; border: 1.5px solid {{filterBd}}; background: {{filterBg}}">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="3"></rect><path d="M3.5 10h17M8 3v4M16 3v4"></path></svg>
+        <span style="flex: 1; min-width: 0; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{rangeLabel}}</span>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{chevron}}"></path></svg>
+      </button>
+      <sc-if value="{{filtering}}" hint-placeholder-val="{{ false }}">
+        <button type="button" onClick="{{clearFilter}}" aria-label="Limpar filtro de período" style="width: 44px; height: 44px; flex-shrink: 0; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #ffffff; border: 1.5px solid {{c2}}; background: transparent">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+        </button>
+      </sc-if>
+    </div>
+
+    <div role="group" aria-label="Filtrar por resultado" style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px">
+      <sc-for list="{{stChips}}" as="ch" hint-placeholder-count="4">
+        <button type="button" onClick="{{ch.pick}}" aria-pressed="{{ch.on}}" aria-label="{{ch.label}}: {{ch.count}}" style="min-width: 0; height: 52px; padding: 0 4px; border-radius: 14px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; white-space: nowrap; color: {{ch.fg}}; background: {{ch.bg}}; border: 1.5px solid {{ch.bd}}">
+          <span style="display: flex; align-items: center; gap: 5px; font-size: 15px; font-weight: 800">
+          <sc-if value="{{ch.isOk}}" hint-placeholder-val="{{ false }}">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"></path></svg>
+          </sc-if>
+          <sc-if value="{{ch.isNo}}" hint-placeholder-val="{{ false }}">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+          </sc-if>
+          <sc-if value="{{ch.isPend}}" hint-placeholder-val="{{ false }}">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"></circle><path d="M12 7.5V12l3 2"></path></svg>
+          </sc-if>
+          {{ch.count}}
+          </span>
+          <span style="max-width: 100%; overflow: hidden; text-overflow: ellipsis; font-size: 12px; font-weight: 700">{{ch.label}}</span>
+        </button>
+      </sc-for>
+    </div>
+
+    <sc-if value="{{filterOpen}}" hint-placeholder-val="{{ false }}">
+      <div role="group" aria-label="Filtrar por período" style="padding: 12px; border-radius: 16px; display: flex; flex-direction: column; gap: 10px; background: {{c4}}">
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+          <div style="display: flex; flex-direction: column; gap: 6px; min-width: 0">
+            <label for="r-from" style="font-size: 12px; font-weight: 700; color: rgba(255,255,255,0.72)">De</label>
+            <div style="position: relative; display: flex">
+              <input id="r-from" type="text" inputmode="numeric" value="{{rFrom}}" onChange="{{onFrom}}" placeholder="dd/mm/aaaa" maxlength="10" style="flex: 1; min-width: 0; width: 100%; height: 48px; padding: 0 46px 0 12px; border-radius: 12px; font-size: 15px; font-weight: 600; color: #ffffff; border: 1.5px solid {{fromBd}}; background: {{c5}}">
+              <button type="button" onClick="{{calFrom}}" aria-label="Escolher data inicial no calendário" style="position: absolute; right: 2px; top: 2px; width: 44px; height: 44px; border: 0; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #ffffff; background: transparent">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="3"></rect><path d="M3.5 10h17M8 3v4M16 3v4"></path></svg>
+              </button>
+            </div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 6px; min-width: 0">
+            <label for="r-to" style="font-size: 12px; font-weight: 700; color: rgba(255,255,255,0.72)">Até</label>
+            <div style="position: relative; display: flex">
+              <input id="r-to" type="text" inputmode="numeric" value="{{rTo}}" onChange="{{onTo}}" placeholder="dd/mm/aaaa" maxlength="10" style="flex: 1; min-width: 0; width: 100%; height: 48px; padding: 0 46px 0 12px; border-radius: 12px; font-size: 15px; font-weight: 600; color: #ffffff; border: 1.5px solid {{toBd}}; background: {{c5}}">
+              <button type="button" onClick="{{calTo}}" aria-label="Escolher data final no calendário" style="position: absolute; right: 2px; top: 2px; width: 44px; height: 44px; border: 0; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #ffffff; background: transparent">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="3"></rect><path d="M3.5 10h17M8 3v4M16 3v4"></path></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+        <sc-if value="{{rCalOpen}}" hint-placeholder-val="{{ false }}">
+          <div style="padding: 10px; border-radius: 14px; display: flex; flex-direction: column; gap: 6px; background: {{c5}}">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px">
+              <button type="button" onClick="{{rPrev}}" aria-label="Mês anterior" style="width: 44px; height: 44px; border: 0; border-radius: 22px; display: flex; align-items: center; justify-content: center; color: #ffffff; background: transparent">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg>
+              </button>
+              <div style="display: flex; flex-direction: column; align-items: center; gap: 2px">
+                <span style="font-size: 15px; font-weight: 800; text-transform: capitalize">{{rTitle}}</span>
+                <span style="font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.72)">{{rHint}}</span>
+              </div>
+              <button type="button" onClick="{{rNext}}" aria-label="Próximo mês" style="width: 44px; height: 44px; border: 0; border-radius: 22px; display: flex; align-items: center; justify-content: center; color: #ffffff; background: transparent">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"></path></svg>
+              </button>
+            </div>
+            <div aria-hidden="true" style="display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px">
+              <sc-for list="{{weekdays}}" as="wd" hint-placeholder-count="7">
+                <span style="height: 22px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: rgba(255,255,255,0.72)">{{wd}}</span>
+              </sc-for>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px">
+              <sc-for list="{{rCells}}" as="cd" hint-placeholder-count="35">
+                <sc-if value="{{cd.isDay}}" hint-placeholder-val="{{ true }}">
+                  <button type="button" onClick="{{cd.pick}}" aria-label="{{cd.aria}}" aria-pressed="{{cd.selected}}" style="height: 38px; border-radius: 19px; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; color: #ffffff; background: {{cd.bg}}; border: 1.5px solid {{cd.bd}}">{{cd.n}}</button>
+                </sc-if>
+                <sc-if value="{{cd.isBlank}}" hint-placeholder-val="{{ false }}">
+                  <span style="height: 38px"></span>
+                </sc-if>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
+        <div style="display: flex; justify-content: space-between; gap: 10px">
+          <button type="button" onClick="{{clearFilter}}" style="height: 44px; padding: 0 16px; border-radius: 22px; font-size: 14px; font-weight: 700; color: #ffffff; background: transparent; border: 1.5px solid rgba(255,255,255,0.55)">Limpar</button>
+          <button type="button" onClick="{{closeFilter}}" style="height: 44px; padding: 0 22px; border: 0; border-radius: 22px; font-size: 14px; font-weight: 800; color: #ffffff; background: {{c1}}">Pronto</button>
+        </div>
+      </div>
+    </sc-if>
+    </div>
+    </sc-if>
+  </header>
+
+  <main onScroll="{{onScroll}}" style="flex: 1; min-height: 0; overflow-y: auto; padding: 4px 20px 180px 20px; display: flex; flex-direction: column; gap: 20px">
+    <sc-if value="{{empty}}" hint-placeholder-val="{{ false }}">
+      <div style="margin-top: 60px; display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center">
+        <p style="margin: 0; font-size: 17px; font-weight: 700">{{emptyTitle}}</p>
+        <p style="margin: 0; font-size: 14px; color: rgba(255,255,255,0.72)">{{emptyText}}</p>
+      </div>
+    </sc-if>
+    <sc-for list="{{groups}}" as="g" hint-placeholder-count="3">
+      <section style="display: flex; flex-direction: column; gap: 8px">
+        <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 8px; padding: 0 4px">
+          <h2 style="margin: 0; font-size: 14px; font-weight: 800; text-transform: capitalize">{{g.label}}</h2>
+          <div style="display: flex; align-items: center; gap: 8px">
+            <span style="font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.72)">{{g.tag}}</span>
+            <sc-if value="{{g.hasPend}}" hint-placeholder-val="{{ false }}">
+              <span style="height: 22px; padding: 0 8px; border-radius: 11px; display: flex; align-items: center; font-size: 11px; font-weight: 800; color: #ffffff; border: 1.5px solid rgba(255,255,255,0.55)">{{g.pendLabel}}</span>
+            </sc-if>
+          </div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 1px; border-radius: 16px; overflow: hidden; background: {{c3}}">
+          <sc-for list="{{g.items}}" as="p" hint-placeholder-count="2">
+            <div style="display: flex; align-items: center; gap: 8px; padding: 10px 10px 10px 14px; min-height: 64px; background: {{c4}}">
+              <button type="button" onClick="{{p.edit}}" aria-label="Editar {{p.name}}" style="flex: 1; min-width: 0; min-height: 44px; padding: 0; border: 0; display: flex; align-items: center; gap: 12px; text-align: left; color: #ffffff; background: transparent">
+                <span style="width: 36px; height: 36px; border-radius: 18px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 800; color: #ffffff; background: {{c2}}">{{p.initial}}</span>
+                <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px">
+                  <span style="font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-decoration: {{p.deco}}; opacity: {{p.dim}}">{{p.name}}</span>
+                  <span style="font-size: 12px; font-weight: 500; color: rgba(255,255,255,0.72)">{{p.dateLabel}}</span>
+                </span>
+              </button>
+              <button type="button" onClick="{{p.toggleNo}}" aria-label="Marcar {{p.name}} como não foi" aria-pressed="{{p.isNo}}" style="width: 44px; height: 44px; flex-shrink: 0; border-radius: 22px; display: flex; align-items: center; justify-content: center; border: 2px solid {{p.noBd}}; color: {{p.noFg}}; background: {{p.noBg}}">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+              </button>
+              <button type="button" onClick="{{p.toggleOk}}" aria-label="Marcar {{p.name}} como foi" aria-pressed="{{p.isOk}}" style="width: 44px; height: 44px; flex-shrink: 0; border-radius: 22px; display: flex; align-items: center; justify-content: center; border: 2px solid {{p.okBd}}; color: {{p.okFg}}; background: {{p.okBg}}">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"></path></svg>
+              </button>
+            </div>
+          </sc-for>
+        </div>
+      </section>
+    </sc-for>
+  </main>
+
+  <div style="position: absolute; right: 20px; bottom: 28px; display: flex; align-items: center; gap: 10px">
+    <button type="button" onClick="{{copy}}" disabled="{{noCopy}}" aria-label="Copiar lista: {{sendSub}}" style="width: 56px; height: 56px; border-radius: 28px; display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 28px rgba(0,0,0,0.45); color: {{copyFg}}; background: {{copyBg}}; border: 2px solid {{copyBd}}">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2.5"></rect><path d="M5 15V6.5A2.5 2.5 0 0 1 7.5 4H15"></path></svg>
+    </button>
+    <button type="button" onClick="{{shareWa}}" disabled="{{noCopy}}" aria-label="Enviar no WhatsApp: {{sendSub}}" style="height: 56px; padding: 0 22px 0 18px; border-radius: 28px; display: flex; align-items: center; gap: 10px; box-shadow: 0 10px 28px rgba(0,0,0,0.45); border: 2px solid {{fabBd}}; color: {{fabFg}}; background: {{fabBg}}">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 3L10.5 13.5"></path><path d="M21 3l-6.5 18-4-7.5L3 9.5 21 3z"></path></svg>
+      <span style="display: flex; flex-direction: column; align-items: flex-start; gap: 1px">
+        <span style="font-size: 15px; font-weight: 800">Enviar no WhatsApp</span>
+        <span style="font-size: 12px; font-weight: 600; opacity: 0.8">{{sendSub}}</span>
+      </span>
+    </button>
+  </div>
+
+  <sc-if value="{{hasUndo}}" hint-placeholder-val="{{ false }}">
+    <div role="status" style="position: absolute; left: 20px; right: 20px; bottom: 100px; min-height: 56px; padding: 6px 6px 6px 16px; border-radius: 16px; display: flex; align-items: center; gap: 12px; box-shadow: 0 10px 28px rgba(0,0,0,0.5); background: #ffffff; color: #0d1a0a">
+      <span style="flex: 1; min-width: 0; font-size: 14px; font-weight: 600">{{undoMsg}}</span>
+      <button type="button" onClick="{{doUndo}}" style="height: 44px; padding: 0 16px; border: 0; border-radius: 12px; display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 800; color: #ffffff; background: {{c2}}">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14L4 9l5-5"></path><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"></path></svg>
+        Desfazer
+      </button>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{hasToast}}" hint-placeholder-val="{{ false }}">
+    <div role="status" style="position: absolute; left: 20px; right: 20px; bottom: 100px; padding: 14px 16px; border-radius: 16px; display: flex; flex-direction: column; gap: 6px; box-shadow: 0 10px 28px rgba(0,0,0,0.5); background: #ffffff; color: #0d1a0a">
+      <span style="font-size: 14px; font-weight: 800">{{toastTitle}}</span>
+      <span style="font-size: 13px; font-weight: 500; white-space: pre-line; color: #2c3a29">{{toastText}}</span>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{formOpen}}" hint-placeholder-val="{{ false }}">
+    <div style="position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: flex-end; background: rgba(0,0,0,0.62)">
+      <form onSubmit="{{save}}" aria-label="{{formTitle}}" style="margin: 0; max-height: 824px; overflow-y: auto; padding: 12px 20px 28px 20px; border-radius: 28px 28px 0 0; display: flex; flex-direction: column; gap: 16px; border-top: 1px solid {{c3}}; background: {{c4}}">
+        <div style="width: 40px; height: 5px; flex-shrink: 0; border-radius: 3px; align-self: center; background: rgba(255,255,255,0.35)"></div>
+        <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 12px">
+          <div style="display: flex; flex-direction: column; gap: 4px">
+            <h2 style="margin: 0; font-size: 22px; font-weight: 800">{{formTitle}}</h2>
+            <p style="margin: 0; font-size: 14px; color: rgba(255,255,255,0.72)">{{formSub}}</p>
+          </div>
+          <button type="button" onClick="{{closeForm}}" aria-label="Fechar" style="width: 44px; height: 44px; flex-shrink: 0; border: 0; border-radius: 22px; display: flex; align-items: center; justify-content: center; color: #ffffff; background: {{c3}}">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+          </button>
+        </div>
+        <label style="display: flex; flex-direction: column; gap: 8px; font-size: 13px; font-weight: 700">
+          Nome
+          <input type="text" value="{{fName}}" onChange="{{onName}}" placeholder="Nome da pessoa" autocomplete="off" style="height: 52px; padding: 0 16px; border-radius: 14px; font-size: 16px; font-weight: 600; color: #ffffff; border: 1.5px solid {{c2}}; background: {{c5}}">
+        </label>
+        <div style="display: flex; flex-direction: column; gap: 8px">
+          <label for="f-date" style="font-size: 13px; font-weight: 700">Data</label>
+          <div style="position: relative; display: flex">
+            <input id="f-date" type="text" inputmode="numeric" value="{{fDate}}" onChange="{{onDate}}" placeholder="dd/mm/aaaa" maxlength="10" style="flex: 1; min-width: 0; height: 52px; padding: 0 60px 0 16px; border-radius: 14px; font-size: 16px; font-weight: 600; letter-spacing: 0.04em; color: #ffffff; border: 1.5px solid {{c2}}; background: {{c5}}">
+            <button type="button" onClick="{{toggleCal}}" aria-label="Escolher data no calendário" aria-expanded="{{calOpen}}" style="position: absolute; right: 4px; top: 4px; width: 44px; height: 44px; border: 0; border-radius: 11px; display: flex; align-items: center; justify-content: center; color: #ffffff; background: {{calBtnBg}}">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="3"></rect><path d="M3.5 10h17M8 3v4M16 3v4"></path></svg>
+            </button>
+          </div>
+          <sc-if value="{{calOpen}}" hint-placeholder-val="{{ false }}">
+            <div style="padding: 10px; border-radius: 16px; display: flex; flex-direction: column; gap: 6px; border: 1.5px solid {{c2}}; background: {{c5}}">
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px">
+                <button type="button" onClick="{{prevMonth}}" aria-label="Mês anterior" style="width: 44px; height: 44px; border: 0; border-radius: 22px; display: flex; align-items: center; justify-content: center; color: #ffffff; background: transparent">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg>
+                </button>
+                <span style="font-size: 15px; font-weight: 800; text-transform: capitalize">{{calTitle}}</span>
+                <button type="button" onClick="{{nextMonth}}" aria-label="Próximo mês" style="width: 44px; height: 44px; border: 0; border-radius: 22px; display: flex; align-items: center; justify-content: center; color: #ffffff; background: transparent">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"></path></svg>
+                </button>
+              </div>
+              <div aria-hidden="true" style="display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px">
+                <sc-for list="{{weekdays}}" as="wd" hint-placeholder-count="7">
+                  <span style="height: 22px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: rgba(255,255,255,0.72)">{{wd}}</span>
+                </sc-for>
+              </div>
+              <div style="display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px">
+                <sc-for list="{{calCells}}" as="cd" hint-placeholder-count="35">
+                  <sc-if value="{{cd.isDay}}" hint-placeholder-val="{{ true }}">
+                    <button type="button" onClick="{{cd.pick}}" aria-label="{{cd.aria}}" aria-pressed="{{cd.selected}}" style="height: 38px; border-radius: 19px; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; color: #ffffff; background: {{cd.bg}}; border: 1.5px solid {{cd.bd}}">{{cd.n}}</button>
+                  </sc-if>
+                  <sc-if value="{{cd.isBlank}}" hint-placeholder-val="{{ false }}">
+                    <span style="height: 38px"></span>
+                  </sc-if>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 8px">
+          <span id="turno-lbl" style="font-size: 13px; font-weight: 700">Turno</span>
+          <div role="group" aria-labelledby="turno-lbl" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+            <sc-for list="{{turnos}}" as="tn" hint-placeholder-count="2">
+              <button type="button" onClick="{{tn.pick}}" aria-pressed="{{tn.on}}" style="height: 48px; border-radius: 14px; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 15px; font-weight: 700; color: #ffffff; background: {{tn.bg}}; border: 1.5px solid {{tn.bd}}">
+                <sc-if value="{{tn.isM}}" hint-placeholder-val="{{ false }}">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"></path></svg>
+                </sc-if>
+                <sc-if value="{{tn.isT}}" hint-placeholder-val="{{ false }}">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M7 17a5 5 0 0 1 10 0"></path><path d="M3 17h18M3 21h18M12 7v3M5.6 10.6l1.4 1.4M18.4 10.6L17 12"></path></svg>
+                </sc-if>
+                {{tn.label}}
+              </button>
+            </sc-for>
+          </div>
+        </div>
+        <sc-if value="{{hasErr}}" hint-placeholder-val="{{ false }}">
+          <p role="alert" style="margin: 0; padding: 10px 12px; border-radius: 12px; font-size: 13px; font-weight: 700; color: #ffc9bd; border: 1.5px solid #ffc9bd">{{errMsg}}</p>
+        </sc-if>
+        <sc-if value="{{isNew}}" hint-placeholder-val="{{ true }}">
+          <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
+            <button type="button" onClick="{{closeForm}}" style="height: 52px; border-radius: 26px; font-size: 16px; font-weight: 700; color: #ffffff; background: transparent; border: 1.5px solid rgba(255,255,255,0.55)">Cancelar</button>
+            <button type="submit" style="height: 52px; border: 0; border-radius: 26px; font-size: 16px; font-weight: 800; color: #ffffff; background: {{c1}}">Adicionar</button>
+          </div>
+        </sc-if>
+        <sc-if value="{{isEdit}}" hint-placeholder-val="{{ false }}">
+          <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
+            <button type="button" onClick="{{remove}}" style="height: 52px; border-radius: 26px; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 16px; font-weight: 700; color: #ffc9bd; background: transparent; border: 1.5px solid #ffc9bd">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12.5A1.5 1.5 0 0 0 8.5 21h7a1.5 1.5 0 0 0 1.5-1.5L18 7M9 7V4.5A1.5 1.5 0 0 1 10.5 3h3A1.5 1.5 0 0 1 15 4.5V7"></path></svg>
+              Excluir
+            </button>
+            <button type="submit" style="height: 52px; border: 0; border-radius: 26px; font-size: 16px; font-weight: 800; color: #ffffff; background: {{c1}}">Salvar</button>
+          </div>
+        </sc-if>
+      </form>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"palette":{"editor":"enum","options":["1","2","3","4"],"default":"1"},"screen":{"editor":"enum","options":["lista","adicionar","editar","filtro"],"default":"lista"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    var PAL = {
+      '1': ['#48793c', '#365b2d', '#243d1e', '#121e0f', '#000000'],
+      '2': ['#437a37', '#336d29', '#245f1c', '#14520e', '#044401'],
+      '3': ['#247e19', '#1b6e13', '#125e0d', '#094e06', '#003e00'],
+      '4': ['#137f0b', '#0e6009', '#0a4006', '#052003', '#000000']
+    };
+    var pal = PAL[String(this.props.palette ?? '1')] || PAL['1'];
+    var c1 = pal[0], c2 = pal[1], c3 = pal[2], c4 = pal[3], c5 = pal[4];
+    var self = this;
+    var s = this.state || {};
+    var screen = this.props.screen || 'lista';
+    var adding = screen === 'adicionar', editPreset = screen === 'editar';
+    var filterPreset = screen === 'filtro', listPreset = screen === 'lista';
+
+    var SEED = [
+      { id: 1, name: 'Ana Souza', date: '03/11/2026', turno: 'manha', status: 'ok' },
+      { id: 9, name: 'Ana Souza', date: '03/11/2026', turno: 'tarde', status: null },
+      { id: 2, name: 'Bruno Lima', date: '03/11/2026', turno: 'tarde', status: 'no' },
+      { id: 3, name: 'Carla Mendes', date: '05/11/2026', turno: 'manha', status: 'ok' },
+      { id: 4, name: 'Diego Rocha', date: '05/11/2026', turno: 'tarde', status: null },
+      { id: 5, name: 'Elisa Prado', date: '06/11/2026', turno: 'manha', status: 'ok' },
+      { id: 6, name: 'Felipe Nunes', date: '10/11/2026', turno: 'manha', status: null },
+      { id: 7, name: 'Gabriela Torres', date: '18/11/2026', turno: 'tarde', status: null },
+      { id: 8, name: 'Henrique Dias', date: '02/12/2026', turno: 'manha', status: null }
+    ];
+    var people = s.people ?? (listPreset ? SEED.filter(function (q) { return q.id !== 4; }) : SEED);
+    var view = s.view ?? 'dia';
+    var findP = function (id) { for (var i = 0; i < people.length; i++) if (people[i].id === id) return people[i]; return null; };
+
+    var MES = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+    var M3 = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+    var DS = ['dom','seg','ter','qua','qui','sex','sáb'];
+    var TURNO = { manha: 'Manhã', tarde: 'Tarde' };
+    var pad = function (n) { return (n < 10 ? '0' : '') + n; };
+    var parse = function (str) {
+      var m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(str || '');
+      if (!m) return null;
+      var d = +m[1], mo = +m[2], y = +m[3];
+      var dt = new Date(y, mo - 1, d);
+      if (dt.getFullYear() !== y || dt.getMonth() !== mo - 1 || dt.getDate() !== d) return null;
+      return dt;
+    };
+    var weekStart = function (dt) {
+      var x = new Date(dt.getFullYear(), dt.getMonth(), dt.getDate());
+      x.setDate(x.getDate() - ((x.getDay() + 6) % 7));
+      return x;
+    };
+    var short = function (dt) { return pad(dt.getDate()) + '/' + pad(dt.getMonth() + 1); };
+    var norm = function (t) {
+      return String(t || '').trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ');
+    };
+    var now = new Date();
+    var today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+
+    var editId = s.editId !== undefined ? s.editId : (editPreset ? 3 : null);
+    var editP = editId !== null ? findP(editId) : null;
+    var isEdit = !!editP;
+    var formOpen = s.formOpen ?? (adding || editPreset);
+    var fName = s.fName ?? (adding ? 'Marina Alves' : editP ? editP.name : '');
+    var fDate = s.fDate ?? (adding ? '12/11/2026' : editP ? editP.date : '');
+    var defTurno = now.getHours() < 12 ? 'manha' : 'tarde';
+    var fTurno = s.fTurno ?? (editP ? editP.turno : adding ? 'manha' : defTurno);
+    var err = s.err ?? '';
+
+    var undoPreset = listPreset ? { msg: 'Excluiu Diego Rocha', prev: SEED } : null;
+    var undo = s.undo !== undefined ? s.undo : undoPreset;
+
+    var commit = function (msg, next, extra) {
+      self.setState(Object.assign({ people: next, undo: { msg: msg, prev: people }, toast: false }, extra || {}));
+      clearTimeout(self._u);
+      self._u = setTimeout(function () { self.setState({ undo: null }); }, 5000);
+    };
+    var update = function (id, st) {
+      var p = findP(id);
+      var ns = p.status === st ? null : st;
+      var next = people.map(function (q) { return q.id === id ? Object.assign({}, q, { status: ns }) : q; });
+      self.setState({ people: next });
+    };
+
+    var filterOpen = s.filterOpen ?? filterPreset;
+    var rFrom = s.rFrom ?? (filterPreset ? '03/11/2026' : '');
+    var rTo = s.rTo ?? (filterPreset ? '10/11/2026' : '');
+    var rCal = s.rCal !== undefined ? s.rCal : null;
+    var fromD = parse(rFrom), toD = parse(rTo);
+    if (fromD && toD && fromD > toD) { var swp = fromD; fromD = toD; toD = swp; }
+    var filtering = !!(fromD || toD);
+
+    var all = people.map(function (p) { return Object.assign({}, p, { dt: parse(p.date) }); })
+      .filter(function (p) { return p.dt; });
+    var sorted = all
+      .filter(function (p) { return (!fromD || p.dt >= fromD) && (!toD || p.dt <= toD); })
+      .sort(function (a, b) {
+        return (a.dt - b.dt) || ((a.turno === 'tarde') - (b.turno === 'tarde')) || (a.id - b.id);
+      });
+
+    var statusF = s.statusF ?? (filterPreset ? 'ok' : 'todos');
+    var matches = function (p) {
+      if (statusF === 'ok') return p.status === 'ok';
+      if (statusF === 'no') return p.status === 'no';
+      if (statusF === 'pend') return !p.status;
+      return true;
+    };
+    var visible = sorted.filter(matches);
+
+    var groups = [];
+    var byKey = {};
+    visible.forEach(function (p) {
+      var dt = p.dt, key, label, tag = '';
+      if (view === 'dia') {
+        key = dt.getTime();
+        label = DS[dt.getDay()] + ', ' + pad(dt.getDate()) + ' de ' + MES[dt.getMonth()];
+        var diff = Math.round((dt.getTime() - today) / 86400000);
+        tag = diff === 0 ? 'Hoje' : diff === 1 ? 'Amanhã' : diff === -1 ? 'Ontem' : '';
+      } else if (view === 'semana') {
+        var ws = weekStart(dt), we = new Date(ws.getFullYear(), ws.getMonth(), ws.getDate() + 6);
+        key = ws.getTime();
+        label = 'Semana ' + pad(ws.getDate()) + ' ' + M3[ws.getMonth()] + ' – ' + pad(we.getDate()) + ' ' + M3[we.getMonth()];
+        tag = (today >= ws.getTime() && today <= we.getTime()) ? 'Esta semana' : '';
+      } else {
+        key = dt.getFullYear() * 100 + dt.getMonth();
+        label = MES[dt.getMonth()] + ' ' + dt.getFullYear();
+      }
+      if (!byKey[key]) { byKey[key] = { label: label, tag: tag, items: [], pend: 0 }; groups.push(byKey[key]); }
+      var isOk = p.status === 'ok', isNo = p.status === 'no';
+      if (!p.status) byKey[key].pend++;
+      byKey[key].items.push({
+        name: p.name,
+        initial: (p.name.trim()[0] || '?').toUpperCase(),
+        dateLabel: DS[dt.getDay()] + ', ' + short(dt) + '/' + dt.getFullYear() + ' · ' + (TURNO[p.turno] || ''),
+        isOk: isOk, isNo: isNo,
+        deco: isNo ? 'line-through' : 'none',
+        dim: isNo ? '0.7' : '1',
+        okBg: isOk ? c1 : 'transparent', okFg: '#ffffff', okBd: isOk ? c1 : 'rgba(255,255,255,0.4)',
+        noBg: isNo ? '#ffc9bd' : 'transparent', noFg: isNo ? '#3a0f06' : '#ffffff', noBd: isNo ? '#ffc9bd' : 'rgba(255,255,255,0.4)',
+        toggleOk: function () { update(p.id, 'ok'); },
+        toggleNo: function () { update(p.id, 'no'); },
+        edit: function () {
+          self.setState({ formOpen: true, editId: p.id, fName: p.name, fDate: p.date, fTurno: p.turno, calOpen: false, calY: undefined, calM: undefined, err: '' });
+        }
+      });
+    });
+    groups.forEach(function (g) {
+      var n = g.items.length;
+      g.tag = (g.tag ? g.tag + ' · ' : '') + n + (n === 1 ? ' pessoa' : ' pessoas');
+      g.hasPend = statusF !== 'pend' && g.pend > 0;
+      g.pendLabel = g.pend + ' sem marcar';
+    });
+
+    var okList = sorted.filter(function (p) { return p.status === 'ok'; });
+    var noList = sorted.filter(function (p) { return p.status === 'no'; });
+    var pendList = sorted.filter(function (p) { return !p.status; });
+    var copyList = statusF === 'no' ? noList : statusF === 'pend' ? pendList : okList;
+    var cn = copyList.length;
+    var sendSub = cn + ' ' + (statusF === 'no' ? (cn === 1 ? 'que não foi' : 'que não foram')
+      : statusF === 'pend' ? (cn === 1 ? 'pendente' : 'pendentes')
+      : (cn === 1 ? 'que foi' : 'que foram'));
+    var listText = copyList.map(function (p, i) { return (i + 1) + '. ' + p.name; }).join('\n');
+    var noCopy = cn === 0;
+
+    var stChips = [['todos', 'Todos', sorted.length], ['ok', 'Foram', okList.length], ['no', 'Não foram', noList.length], ['pend', 'Pendentes', pendList.length]].map(function (v) {
+      var on = statusF === v[0];
+      var isNo = v[0] === 'no';
+      return {
+        label: v[1], count: v[2], on: on, isOk: v[0] === 'ok', isNo: isNo, isPend: v[0] === 'pend',
+        bg: on ? (isNo ? '#ffc9bd' : c1) : 'transparent',
+        fg: on && isNo ? '#3a0f06' : '#ffffff',
+        bd: on ? (isNo ? '#ffc9bd' : c1) : c3,
+        pick: function () { self.setState({ statusF: v[0] }); }
+      };
+    });
+
+    var segs = [['dia', 'Dia'], ['semana', 'Semana'], ['mes', 'Mês']].map(function (v) {
+      var on = view === v[0];
+      return { label: v[1], on: on, fg: on ? '#ffffff' : 'rgba(255,255,255,0.72)', bg: on ? c1 : 'transparent',
+        pick: function () { self.setState({ view: v[0] }); } };
+    });
+
+    var turnos = [['manha', 'Manhã'], ['tarde', 'Tarde']].map(function (v) {
+      var on = fTurno === v[0];
+      return { label: v[1], on: on, isM: v[0] === 'manha', isT: v[0] === 'tarde',
+        bg: on ? c1 : c5, bd: on ? c1 : c2,
+        pick: function () { self.setState({ fTurno: v[0], err: '' }); } };
+    });
+
+    var fmtDate = function (v) {
+      var d = String(v).replace(/\D/g, '').slice(0, 8);
+      if (d.length > 4) return d.slice(0, 2) + '/' + d.slice(2, 4) + '/' + d.slice(4);
+      if (d.length > 2) return d.slice(0, 2) + '/' + d.slice(2);
+      return d;
+    };
+    var val = function (e) { return e && e.target ? e.target.value : e; };
+
+    var fParsed = parse(fDate);
+    var dupOf = null;
+    if (formOpen && fParsed && norm(fName)) {
+      for (var i = 0; i < people.length; i++) {
+        var q = people[i], qd = parse(q.date);
+        if (q.id !== editId && qd && qd.getTime() === fParsed.getTime() && q.turno === fTurno && norm(q.name) === norm(fName)) { dupOf = q; break; }
+      }
+    }
+    var dupMsg = dupOf ? dupOf.name + ' já está na lista em ' + short(fParsed) + ' de ' + (fTurno === 'manha' ? 'manhã' : 'tarde') + '. Mude o turno ou a data.' : '';
+    var errMsg = dupMsg || err;
+
+    var calOpen = s.calOpen ?? adding;
+    var base = fParsed || now;
+    var calY = s.calY ?? base.getFullYear();
+    var calM = s.calM ?? base.getMonth();
+    var buildCal = function (y, m, a, b, onPick) {
+      var cells = [];
+      var fd = new Date(y, m, 1).getDay(), dn = new Date(y, m + 1, 0).getDate();
+      for (var i = 0; i < fd; i++) cells.push({ isDay: false, isBlank: true });
+      var at = a ? a.getTime() : null, bt = b ? b.getTime() : null;
+      for (var d = 1; d <= dn; d++) {
+        (function (d) {
+          var t = new Date(y, m, d).getTime();
+          var sel = t === at || t === bt;
+          var inR = at !== null && bt !== null && t > at && t < bt;
+          cells.push({
+            isDay: true, isBlank: false, n: d, selected: sel,
+            aria: d + ' de ' + MES[m] + ' de ' + y,
+            bg: sel ? c1 : inR ? c3 : 'transparent',
+            bd: sel ? c1 : t === today ? 'rgba(255,255,255,0.6)' : 'transparent',
+            pick: function () { onPick(pad(d) + '/' + pad(m + 1) + '/' + y); }
+          });
+        })(d);
+      }
+      return cells;
+    };
+    var calCells = buildCal(calY, calM, fParsed, null, function (v) {
+      self.setState({ fDate: v, calOpen: false, err: '' });
+    });
+    var shiftMonth = function (k) {
+      var nd = new Date(calY, calM + k, 1);
+      self.setState({ calY: nd.getFullYear(), calM: nd.getMonth() });
+    };
+
+    var rBase = (rCal === 'to' ? toD : fromD) || fromD || now;
+    var rY = s.rY ?? rBase.getFullYear();
+    var rM = s.rM ?? rBase.getMonth();
+    var rCells = buildCal(rY, rM, fromD, toD, function (v) {
+      if (rCal === 'from') self.setState({ rFrom: v, rCal: 'to' });
+      else self.setState({ rTo: v, rCal: null });
+    });
+    var openRCal = function (which) {
+      if (rCal === which) { self.setState({ rCal: null }); return; }
+      var p = (which === 'to' ? toD : fromD) || fromD || now;
+      self.setState({ rCal: which, rY: p.getFullYear(), rM: p.getMonth() });
+    };
+    var shiftR = function (k) {
+      var nd = new Date(rY, rM + k, 1);
+      self.setState({ rY: nd.getFullYear(), rM: nd.getMonth() });
+    };
+    var rangeLabel = !filtering ? 'Período: todas as datas'
+      : fromD && toD ? 'Período: ' + short(fromD) + ' a ' + short(toD)
+      : fromD ? 'Período: a partir de ' + short(fromD)
+      : 'Período: até ' + short(toD);
+
+    var closeState = { formOpen: false, editId: null, err: '', calOpen: false };
+    var anyFilter = filtering || statusF !== 'todos';
+
+    return {
+      c1: c1, c2: c2, c3: c3, c4: c4, c5: c5,
+      totalLabel: anyFilter ? visible.length + ' de ' + all.length + ' pessoas' : all.length + ' pessoas',
+      okCount: okList.length,
+      noCount: noList.length,
+      segs: segs,
+      collapsed: !!s.collapsed,
+      showFilters: !s.collapsed,
+      hdrPad: s.collapsed ? '14px' : '28px',
+      h1Size: s.collapsed ? '22px' : '28px',
+      hdrShadow: s.collapsed ? '0 8px 20px rgba(0,0,0,0.35)' : 'none',
+      filtSummary: ({ dia: 'Dia', semana: 'Semana', mes: 'Mês' })[view] + ' · ' + ({ todos: 'Todos', ok: 'Foram', no: 'Não foram', pend: 'Pendentes' })[statusF] + ' · ' + rangeLabel.replace('Período: ', ''),
+      expandFilters: function () { self.setState({ collapsed: false }); },
+      onScroll: function (e) {
+        var el = e && (e.currentTarget || e.target);
+        if (!el) return;
+        var y = el.scrollTop, last = self._lastY || 0;
+        self._lastY = y;
+        var c = !!(self.state && self.state.collapsed);
+        if (!c && y > 80 && y - last > 4) self.setState({ collapsed: true, rCal: null });
+        else if (c && (y < 12 || last - y > 12)) self.setState({ collapsed: false });
+      },
+      stChips: stChips,
+      groups: groups,
+      empty: groups.length === 0,
+      emptyTitle: !all.length ? 'Nenhuma pessoa ainda' : statusF !== 'todos' && sorted.length ? 'Ninguém com esse resultado' : 'Ninguém nesse período',
+      emptyText: !all.length ? 'Toque em Adicionar para começar a lista.' : 'Ajuste os filtros ou toque em Todos.',
+
+      filtering: filtering,
+      filterOpen: filterOpen,
+      filterBg: filtering ? c3 : c4,
+      filterBd: filtering ? c1 : c4,
+      chevron: filterOpen ? 'M6 15l6-6 6 6' : 'M6 9l6 6 6-6',
+      rangeLabel: rangeLabel,
+      rFrom: rFrom,
+      rTo: rTo,
+      fromBd: rCal === 'from' ? c1 : c2,
+      toBd: rCal === 'to' ? c1 : c2,
+      rCalOpen: !!rCal,
+      rCells: rCells,
+      rTitle: MES[rM] + ' ' + rY,
+      rHint: rCal === 'from' ? 'Escolha a data inicial' : 'Escolha a data final',
+      toggleFilter: function () { self.setState({ filterOpen: !filterOpen, rCal: null }); },
+      closeFilter: function () { self.setState({ filterOpen: false, rCal: null }); },
+      clearFilter: function () { self.setState({ rFrom: '', rTo: '', rCal: null }); },
+      onFrom: function (e) { self.setState({ rFrom: fmtDate(val(e)) }); },
+      onTo: function (e) { self.setState({ rTo: fmtDate(val(e)) }); },
+      calFrom: function () { openRCal('from'); },
+      calTo: function () { openRCal('to'); },
+      rPrev: function () { shiftR(-1); },
+      rNext: function () { shiftR(1); },
+
+      noCopy: noCopy,
+      sendSub: sendSub,
+      fabBg: noCopy ? c4 : '#ffffff',
+      fabFg: noCopy ? 'rgba(255,255,255,0.6)' : c5 === '#000000' ? c4 : c5,
+      fabBd: noCopy ? c3 : '#ffffff',
+      copyBg: noCopy ? c4 : c2,
+      copyFg: noCopy ? 'rgba(255,255,255,0.5)' : '#ffffff',
+      copyBd: noCopy ? c3 : c1,
+      hasToast: !!s.toast,
+      toastTitle: cn + (cn === 1 ? ' contato foi copiado' : ' contatos foram copiados'),
+      toastText: listText,
+      hasUndo: !!undo && !s.toast,
+      undoMsg: undo ? undo.msg : '',
+      doUndo: function () {
+        clearTimeout(self._u);
+        self.setState(undo && undo.prev ? { people: undo.prev, undo: null } : { undo: null });
+      },
+
+      formOpen: formOpen,
+      isEdit: isEdit,
+      isNew: !isEdit,
+      formTitle: isEdit ? 'Editar pessoa' : 'Adicionar pessoa',
+      formSub: isEdit ? 'Corrija o nome, a data ou o turno.' : 'Nome, data e turno.',
+      fName: fName,
+      fDate: fDate,
+      turnos: turnos,
+      errMsg: errMsg,
+      hasErr: !!errMsg,
+      calOpen: calOpen,
+      calBtnBg: calOpen ? c1 : c3,
+      calTitle: MES[calM] + ' ' + calY,
+      weekdays: ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'],
+      calCells: calCells,
+      toggleCal: function () {
+        var p = parse(fDate) || now;
+        self.setState(calOpen ? { calOpen: false } : { calOpen: true, calY: p.getFullYear(), calM: p.getMonth() });
+      },
+      prevMonth: function () { shiftMonth(-1); },
+      nextMonth: function () { shiftMonth(1); },
+      openForm: function () {
+        self.setState({ formOpen: true, editId: null, fName: '', fDate: '', fTurno: defTurno, err: '', calOpen: false, calY: undefined, calM: undefined });
+      },
+      closeForm: function () { self.setState(closeState); },
+      onName: function (e) { self.setState({ fName: val(e), err: '' }); },
+      onDate: function (e) { self.setState({ fDate: fmtDate(val(e)), err: '' }); },
+      save: function (e) {
+        if (e && e.preventDefault) e.preventDefault();
+        var nm = String(fName).trim().replace(/\s+/g, ' ');
+        if (!nm) { self.setState({ err: 'Escreva o nome da pessoa.' }); return; }
+        if (!fParsed) { self.setState({ err: 'Use uma data válida no formato dd/mm/aaaa.' }); return; }
+        if (dupOf) return;
+        if (isEdit) {
+          self.setState(Object.assign({ people: people.map(function (q) {
+            return q.id === editId ? Object.assign({}, q, { name: nm, date: fDate, turno: fTurno }) : q;
+          }) }, closeState));
+        } else {
+          self.setState(Object.assign({ people: people.concat([{ id: Date.now(), name: nm, date: fDate, turno: fTurno, status: null }]) }, closeState));
+        }
+      },
+      remove: function () {
+        if (!editP) return;
+        commit('Excluiu ' + editP.name, people.filter(function (q) { return q.id !== editId; }), closeState);
+      },
+
+      copy: function () {
+        if (noCopy) return;
+        var done = function () {
+          self.setState({ toast: true });
+          clearTimeout(self._t);
+          self._t = setTimeout(function () { self.setState({ toast: false }); }, 2600);
+        };
+        try {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(listText).then(done, done);
+            return;
+          }
+        } catch (x) {}
+        done();
+      },
+      shareWa: function () {
+        if (noCopy) return;
+        try { window.open('https://wa.me/?text=' + encodeURIComponent(listText), '_blank', 'noopener'); } catch (x) {}
+      }
+    };
+  }
+}
+</script>
+</body>
+</html>
