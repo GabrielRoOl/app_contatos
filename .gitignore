@@ -1,20 +1,13 @@
 # dependências e build
 node_modules/
 dist/
+target/
 *.tsbuildinfo
 
 # segredos
 .env
 .env.*
 !.env.example
-
-# banco local
-*.db
-*.db-journal
-*.db-wal
-*.db-shm
-api/data/
-
 
 # sistema/editor
 .DS_Store

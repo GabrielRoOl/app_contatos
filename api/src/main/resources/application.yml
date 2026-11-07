@@ -1,0 +1,32 @@
+# Rodar a partir de /api. As variáveis vêm do .env da raiz do repositório (ou do ambiente).
+spring:
+  application:
+    name: contatos-api
+  config:
+    import: "optional:file:../.env[.properties]"
+  datasource:
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB:contatos}
+    username: ${POSTGRES_USER:contatos}
+    password: ${POSTGRES_PASSWORD:}
+  jackson:
+    property-naming-strategy: SNAKE_CASE
+    deserialization:
+      fail-on-unknown-properties: false
+  mvc:
+    throw-exception-if-no-handler-found: true
+  web:
+    resources:
+      add-mappings: false
+  flyway:
+    # Postgres é a fonte da verdade. Os testes usam db/migration/h2 (ver perfil test).
+    locations: classpath:db/migration/postgres
+
+server:
+  port: ${PORT:3333}
+  shutdown: graceful
+
+app:
+  token: ${API_TOKEN:}
+  cors-origin: ${CORS_ORIGIN:http://localhost:5173}
+  retencao-excluidos-dias: 30
+  limpeza-cron: "0 30 3 * * *"
