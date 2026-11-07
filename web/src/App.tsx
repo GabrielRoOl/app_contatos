@@ -1,14 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { AlertNotice, CopiedToast, UndoSnackbar } from './components/Notices';
+import { ConnectSheet } from './components/ConnectSheet';
 import { FloatingActions } from './components/FloatingActions';
 import { GroupSection } from './components/GroupSection';
 import { PeriodFilter } from './components/PeriodFilter';
 import { PersonSheet } from './components/PersonSheet';
 import { StatusChips } from './components/StatusChips';
 import { ViewSwitch } from './components/ViewSwitch';
-import { IconChevronDown, IconPlus, IconSliders } from './components/icons';
+import { IconChevronDown, IconCloud, IconPlus, IconSliders } from './components/icons';
 import { OfflineRepository } from './data/offlineRepository';
 import { useCollapseOnScroll } from './hooks/useCollapseOnScroll';
+import { useEstadoSync } from './hooks/useEstadoSync';
 import { usePessoas } from './hooks/usePessoas';
 import { parseBR, shortBR, today } from './lib/dates';
 import {
@@ -32,6 +34,8 @@ export function App() {
   const [rTo, setRTo] = useState('');
   const [periodOpen, setPeriodOpen] = useState(false);
   const [sheet, setSheet] = useState<Sheet>(null);
+  const [connectOpen, setConnectOpen] = useState(false);
+  const estado = useEstadoSync(repo);
   const [toast, setToast] = useState<{ count: number; text: string } | null>(null);
   const [undo, setUndo] = useState<Pessoa | null>(null);
   const { collapsed, setCollapsed, onScroll } = useCollapseOnScroll();
@@ -39,6 +43,10 @@ export function App() {
 
   useEffect(() => () => { clearTimeout(timers.current.toast); clearTimeout(timers.current.undo); }, []);
   useEffect(() => repo.start(), []);
+  // sem URL/token, ou token recusado: abre a tela de conectar (uma vez por mudança de estado)
+  useEffect(() => {
+    if (estado === 'sem_config' || estado === 'nao_autorizado') setConnectOpen(true);
+  }, [estado]);
   useEffect(() => {
     if (!aviso) return;
     const t = window.setTimeout(limparAviso, 6000);
@@ -134,9 +142,15 @@ export function App() {
             <h1>Contatos</h1>
             <p className="header__summary">{summary}</p>
           </div>
-          <button type="button" className="btn-add" onClick={() => setSheet({ mode: 'add' })}>
-            <IconPlus /> Adicionar
-          </button>
+          <div className="header__actions">
+            <button type="button" className="icon-btn icon-btn--filled" onClick={() => setConnectOpen(true)}
+              aria-label="Conexão com a API">
+              <IconCloud size={20} />
+            </button>
+            <button type="button" className="btn-add" onClick={() => setSheet({ mode: 'add' })}>
+              <IconPlus /> Adicionar
+            </button>
+          </div>
         </div>
 
         {collapsed ? (
@@ -176,6 +190,8 @@ export function App() {
 
       {aviso ? <AlertNotice message={aviso} /> : toast && <CopiedToast count={toast.count} text={toast.text} />}
       {!aviso && !toast && undo && <UndoSnackbar message={`Excluiu ${undo.nome}`} onUndo={handleUndo} />}
+
+      {connectOpen && <ConnectSheet estado={estado} onClose={() => setConnectOpen(false)} />}
 
       {sheet && (
         <PersonSheet

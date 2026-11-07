@@ -27,3 +27,4 @@ export const IconTrash = (p: P) => <Svg {...p}><path d="M4 7h16M10 11v6M14 11v6M
 export const IconSun = (p: P) => <Svg {...p}><circle cx="12" cy="12" r="4" /><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4" /></Svg>;
 export const IconSunset = (p: P) => <Svg {...p}><path d="M7 17a5 5 0 0 1 10 0" /><path d="M3 17h18M3 21h18M12 7v3M5.6 10.6l1.4 1.4M18.4 10.6L17 12" /></Svg>;
 export const IconSliders = (p: P) => <Svg {...p}><path d="M4 7h10M18 7h2M4 17h4M12 17h8" /><circle cx="16" cy="7" r="2" /><circle cx="10" cy="17" r="2" /></Svg>;
+export const IconCloud = (p: P) => <Svg {...p}><path d="M7 18.5a4.5 4.5 0 0 1-.6-8.96A6 6 0 0 1 18 9.5a4.5 4.5 0 0 1-.5 9z" /></Svg>;

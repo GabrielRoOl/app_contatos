@@ -31,15 +31,6 @@ export function salvarConexao(c: Conexao) {
   ouvintes.forEach((f) => f());
 }
 
-export function limparConexao() {
-  try {
-    localStorage.removeItem(KEY);
-  } catch {
-    /* ignora */
-  }
-  ouvintes.forEach((f) => f());
-}
-
 export const conexaoCompleta = (c: Conexao) => !!(c.url && c.token);
 
 export function aoMudarConexao(f: () => void) {
