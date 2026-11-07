@@ -18,3 +18,12 @@ export function UndoSnackbar({ message, onUndo }: { message: string; onUndo: () 
     </div>
   );
 }
+
+/** Falhas de gravação ou de sincronização que o usuário precisa saber. */
+export function AlertNotice({ message }: { message: string }) {
+  return (
+    <div className="notice notice--toast" role="alert">
+      <strong>{message}</strong>
+    </div>
+  );
+}

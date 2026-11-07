@@ -13,6 +13,28 @@ export interface Pessoa {
   turno: Turno;
   status: Status;
   criadoEm: string; // ISO timestamp
+  atualizadoEm: string; // ISO timestamp
+  /** Última versão conhecida do servidor (0 = ainda não enviada). */
+  versao: number;
+  /** Erro que o servidor devolveu ao enviar esta pessoa; mostrado ao abrir o registro. */
+  erro?: string | null;
+}
+
+/** UUID v4 gerado no cliente (criar offline). Funciona também fora de contexto seguro. */
+export function newId(): string {
+  const c = globalThis.crypto;
+  if (c?.randomUUID) return c.randomUUID();
+  const b = c.getRandomValues(new Uint8Array(16));
+  b[6] = (b[6] & 0x0f) | 0x40;
+  b[8] = (b[8] & 0x3f) | 0x80;
+  const h = Array.from(b, (x) => x.toString(16).padStart(2, '0')).join('');
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
+}
+
+/** Pessoa nova, ainda só local: o id já nasce no cliente. */
+export function novaPessoa(input: { nome: string; data: string; turno: Turno }, id = newId()): Pessoa {
+  const agora = new Date().toISOString();
+  return { id, status: null, criadoEm: agora, atualizadoEm: agora, versao: 0, erro: null, ...input };
 }
 
 export const TURNO_LABEL: Record<Turno, string> = { manha: 'Manhã', tarde: 'Tarde' };
@@ -38,7 +60,7 @@ export function findDuplicate(
   );
 }
 
-export function duplicateMessage(dup: Pessoa, turno: Turno) {
+export function duplicateMessage(dup: Pick<Pessoa, 'nome' | 'data'>, turno: Turno) {
   return `${dup.nome} já está na lista em ${shortBR(fromISO(dup.data))} de ${turno === 'manha' ? 'manhã' : 'tarde'}. Mude o turno ou a data.`;
 }
 

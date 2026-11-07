@@ -20,7 +20,7 @@ export function PersonSheet({ pessoa, pessoas, onClose, onSubmit, onDelete }: Pr
   const [data, setData] = useState(pessoa ? isoToBR(pessoa.data) : '');
   const [turno, setTurno] = useState<Turno>(pessoa?.turno ?? defaultTurno());
   const [calOpen, setCalOpen] = useState(false);
-  const [err, setErr] = useState('');
+  const [err, setErr] = useState(pessoa?.erro ?? ''); // erro que o servidor devolveu ao enviar este registro
 
   const parsed = parseBR(data);
   const dup = useMemo(

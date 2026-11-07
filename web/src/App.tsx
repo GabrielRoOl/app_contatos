@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { CopiedToast, UndoSnackbar } from './components/Notices';
+import { AlertNotice, CopiedToast, UndoSnackbar } from './components/Notices';
 import { FloatingActions } from './components/FloatingActions';
 import { GroupSection } from './components/GroupSection';
 import { PeriodFilter } from './components/PeriodFilter';
@@ -7,7 +7,7 @@ import { PersonSheet } from './components/PersonSheet';
 import { StatusChips } from './components/StatusChips';
 import { ViewSwitch } from './components/ViewSwitch';
 import { IconChevronDown, IconPlus, IconSliders } from './components/icons';
-import { LocalRepository } from './data/repository';
+import { OfflineRepository } from './data/offlineRepository';
 import { useCollapseOnScroll } from './hooks/useCollapseOnScroll';
 import { usePessoas } from './hooks/usePessoas';
 import { parseBR, shortBR, today } from './lib/dates';
@@ -16,8 +16,7 @@ import {
   type Pessoa, type StatusFilter, type View,
 } from './lib/people';
 
-// TODO (agente de front): trocar pela implementação IndexedDB + fila offline + API.
-const repo = new LocalRepository();
+const repo = new OfflineRepository();
 
 type Sheet = { mode: 'add' } | { mode: 'edit'; pessoa: Pessoa } | null;
 
@@ -25,7 +24,7 @@ const VIEW_LABEL: Record<View, string> = { dia: 'Dia', semana: 'Semana', mes: 'M
 const STATUS_LABEL: Record<StatusFilter, string> = { todos: 'Todos', ok: 'Foram', nao: 'Não foram', pend: 'Pendentes' };
 
 export function App() {
-  const { pessoas, add, edit, toggleStatus, remove, restore } = usePessoas(repo);
+  const { pessoas, aviso, limparAviso, add, edit, toggleStatus, remove, restore } = usePessoas(repo);
 
   const [view, setView] = useState<View>('dia');
   const [statusF, setStatusF] = useState<StatusFilter>('todos');
@@ -39,6 +38,12 @@ export function App() {
   const timers = useRef<{ toast?: number; undo?: number }>({});
 
   useEffect(() => () => { clearTimeout(timers.current.toast); clearTimeout(timers.current.undo); }, []);
+  useEffect(() => repo.start(), []);
+  useEffect(() => {
+    if (!aviso) return;
+    const t = window.setTimeout(limparAviso, 6000);
+    return () => clearTimeout(t);
+  }, [aviso, limparAviso]);
 
   // ----- dados derivados -----
   const [from, to] = normalizePeriod(parseBR(rFrom), parseBR(rTo));
@@ -169,8 +174,8 @@ export function App() {
 
       <FloatingActions disabled={!toSend.length} subtitle={subtitle} onCopy={copy} onShare={share} />
 
-      {toast && <CopiedToast count={toast.count} text={toast.text} />}
-      {!toast && undo && <UndoSnackbar message={`Excluiu ${undo.nome}`} onUndo={handleUndo} />}
+      {aviso ? <AlertNotice message={aviso} /> : toast && <CopiedToast count={toast.count} text={toast.text} />}
+      {!aviso && !toast && undo && <UndoSnackbar message={`Excluiu ${undo.nome}`} onUndo={handleUndo} />}
 
       {sheet && (
         <PersonSheet
