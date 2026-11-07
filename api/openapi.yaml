@@ -1,0 +1,352 @@
+openapi: 3.0.3
+info:
+  title: App Contatos API
+  version: 0.1.0
+  description: |
+    API de um único usuário para registrar pessoas por data e turno.
+    JSON em snake_case. Datas de calendário são `YYYY-MM-DD`. Timestamps em UTC com
+    milissegundos fixos (`2026-11-03T12:10:00.000Z`).
+    Todas as rotas exigem `Authorization: Bearer <token>`, exceto requisições OPTIONS (CORS).
+servers:
+  - url: http://localhost:3333/api/v1
+security:
+  - bearerAuth: []
+tags:
+  - name: pessoas
+  - name: sync
+
+paths:
+  /pessoas:
+    get:
+      tags: [pessoas]
+      summary: Lista as pessoas não excluídas
+      description: Ordem por data, turno (manha antes de tarde), criado_em. Todos os filtros são opcionais e o período é inclusivo.
+      parameters:
+        - name: de
+          in: query
+          schema: { type: string, format: date }
+        - name: ate
+          in: query
+          schema: { type: string, format: date }
+        - name: status
+          in: query
+          schema: { type: string, enum: [ok, nao, pendente] }
+      responses:
+        '200':
+          description: Lista (array puro)
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Pessoa' }
+        '401': { $ref: '#/components/responses/NaoAutorizado' }
+        '422': { $ref: '#/components/responses/Validacao' }
+    post:
+      tags: [pessoas]
+      summary: Cria uma pessoa (idempotente pelo id do cliente)
+      description: |
+        201 ao criar. 200 se o mesmo `id` já existir com o mesmo conteúdo (nome, data, turno e status).
+        Mesmo `id` com conteúdo diferente: 409 `CONFLITO_VERSAO` com o registro do servidor em `detalhes.atual`.
+        Fere a unicidade (nome normalizado + data + turno entre ativos): 409 `DUPLICADO`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/NovaPessoa' }
+            example: { id: 6f1c2e0a-8d4b-4b8e-9a51-1f0c9d3e2b77, nome: Ana Souza, data: '2026-11-03', turno: manha }
+      responses:
+        '201':
+          description: Criada
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Pessoa' }
+        '200':
+          description: Já existia com o mesmo conteúdo
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Pessoa' }
+        '401': { $ref: '#/components/responses/NaoAutorizado' }
+        '409': { $ref: '#/components/responses/Conflito' }
+        '422': { $ref: '#/components/responses/Validacao' }
+
+  /pessoas/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    patch:
+      tags: [pessoas]
+      summary: Altera nome, data, turno e/ou status
+      description: |
+        Todos os campos são opcionais. A `versao` (no corpo ou em `If-Match`) só é exigida e conferida
+        quando a alteração muda nome, data ou turno; sem ela, 422. Divergência: 409 `CONFLITO_VERSAO`
+        com o registro atual em `detalhes.atual`. Alteração só de `status` sempre vence (a última recebida).
+        `status` ausente não mexe no status; `status: null` volta para pendente.
+        Sem mudança real, devolve o registro sem incrementar `versao`.
+        Registro excluído ou inexistente: 404.
+      parameters:
+        - name: If-Match
+          in: header
+          required: false
+          description: 'Versão atual conhecida (ex.: 3 ou "3"). Alternativa ao campo versao do corpo.'
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AlteracaoPessoa' }
+            example: { nome: Ana Maria Souza, versao: 3 }
+      responses:
+        '200':
+          description: Registro após a alteração
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Pessoa' }
+        '401': { $ref: '#/components/responses/NaoAutorizado' }
+        '404': { $ref: '#/components/responses/NaoEncontrado' }
+        '409': { $ref: '#/components/responses/Conflito' }
+        '422': { $ref: '#/components/responses/Validacao' }
+    delete:
+      tags: [pessoas]
+      summary: Exclusão lógica (idempotente)
+      description: Preenche `excluido_em` e incrementa `versao`. Excluir o que já está excluído devolve o registro como está.
+      responses:
+        '200':
+          description: Registro excluído
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Pessoa' }
+        '401': { $ref: '#/components/responses/NaoAutorizado' }
+        '404': { $ref: '#/components/responses/NaoEncontrado' }
+
+  /pessoas/{id}/restaurar:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [pessoas]
+      summary: Desfaz a exclusão (idempotente)
+      description: Revalida a unicidade antes de limpar `excluido_em`. Restaurar o que já está ativo devolve o registro como está.
+      responses:
+        '200':
+          description: Registro restaurado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Pessoa' }
+        '401': { $ref: '#/components/responses/NaoAutorizado' }
+        '404': { $ref: '#/components/responses/NaoEncontrado' }
+        '409':
+          description: Já existe outra pessoa ativa igual (`DUPLICADO`)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Erro' }
+
+  /sync:
+    get:
+      tags: [sync]
+      summary: Tudo que mudou desde um instante, inclusive os excluídos
+      description: |
+        Usa `atualizado_em >= desde`, para não perder alterações no mesmo instante. Sem `desde`, devolve tudo.
+        `agora` é o relógio do servidor, calculado antes da consulta: use como próximo `desde`.
+      parameters:
+        - name: desde
+          in: query
+          required: false
+          description: 'Timestamp ISO 8601 com fuso (ex.: 2026-11-03T12:10:00.000Z). Codifique o + de offsets como %2B.'
+          schema: { type: string, format: date-time }
+      responses:
+        '200':
+          description: Alterações
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RespostaDelta' }
+        '401': { $ref: '#/components/responses/NaoAutorizado' }
+        '422': { $ref: '#/components/responses/Validacao' }
+    post:
+      tags: [sync]
+      summary: Envia em lote a fila offline
+      description: |
+        Array de operações (máximo 500; acima disso, 422). Cada uma roda em ordem e em transação própria;
+        se uma falha, as outras seguem. A resposta tem o resultado de cada operação, na mesma ordem.
+        `agora` é calculado antes de processar. HTTP 200 mesmo com falhas individuais.
+        Em `criar`, o `id` vem da operação e `dados` traz nome, data, turno e status opcional (idempotente).
+        Em `alterar`, a `versao` vem na operação (ou em `dados.versao`).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              maxItems: 500
+              items: { $ref: '#/components/schemas/OperacaoSync' }
+            example:
+              - { op: criar, id: 6f1c2e0a-8d4b-4b8e-9a51-1f0c9d3e2b77, dados: { nome: Ana Souza, data: '2026-11-03', turno: manha } }
+              - { op: alterar, id: 6f1c2e0a-8d4b-4b8e-9a51-1f0c9d3e2b77, versao: 1, dados: { status: ok } }
+              - { op: excluir, id: 6f1c2e0a-8d4b-4b8e-9a51-1f0c9d3e2b77 }
+      responses:
+        '200':
+          description: Resultado por operação
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RespostaLote' }
+        '401': { $ref: '#/components/responses/NaoAutorizado' }
+        '422': { $ref: '#/components/responses/Validacao' }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+
+  parameters:
+    Id:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+
+  responses:
+    NaoAutorizado:
+      description: Token ausente ou inválido (`NAO_AUTORIZADO`)
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Erro' }
+          example: { codigo: NAO_AUTORIZADO, mensagem: Token ausente ou inválido. }
+    NaoEncontrado:
+      description: O id não existe, ou o registro está excluído em alteração (`NAO_ENCONTRADO`)
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Erro' }
+    Validacao:
+      description: Dados inválidos, inclusive JSON malformado (`VALIDACAO`)
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Erro' }
+          example:
+            codigo: VALIDACAO
+            mensagem: Dados inválidos.
+            detalhes: { campos: { data: Data inexistente. } }
+    Conflito:
+      description: |
+        `DUPLICADO` (detalhes.conflito traz o registro existente) ou
+        `CONFLITO_VERSAO` (detalhes.atual traz o registro do servidor)
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Erro' }
+          examples:
+            duplicado:
+              value:
+                codigo: DUPLICADO
+                mensagem: Ana Souza já está na lista em 03/11 de manhã.
+                detalhes:
+                  conflito: { id: 6f1c2e0a-8d4b-4b8e-9a51-1f0c9d3e2b77, nome: Ana Souza, data: '2026-11-03', turno: manha }
+            conflito_versao:
+              value:
+                codigo: CONFLITO_VERSAO
+                mensagem: 'O registro foi alterado em outro lugar. Versão atual: 3.'
+                detalhes:
+                  atual:
+                    id: 6f1c2e0a-8d4b-4b8e-9a51-1f0c9d3e2b77
+                    nome: Ana Souza
+                    data: '2026-11-03'
+                    turno: manha
+                    status: ok
+                    criado_em: '2026-11-03T12:10:00.000Z'
+                    atualizado_em: '2026-11-03T18:42:00.000Z'
+                    excluido_em: null
+                    versao: 3
+
+  schemas:
+    Turno:
+      type: string
+      enum: [manha, tarde]
+    Status:
+      type: string
+      nullable: true
+      enum: [ok, nao]
+      description: null = pendente
+    Pessoa:
+      type: object
+      required: [id, nome, data, turno, status, criado_em, atualizado_em, excluido_em, versao]
+      properties:
+        id: { type: string, format: uuid }
+        nome: { type: string, minLength: 1, maxLength: 80, description: Sem espaços nas pontas e com espaços internos colapsados }
+        data: { type: string, format: date }
+        turno: { $ref: '#/components/schemas/Turno' }
+        status: { $ref: '#/components/schemas/Status' }
+        criado_em: { type: string, format: date-time }
+        atualizado_em: { type: string, format: date-time }
+        excluido_em: { type: string, format: date-time, nullable: true }
+        versao: { type: integer, minimum: 1 }
+      example:
+        id: 6f1c2e0a-8d4b-4b8e-9a51-1f0c9d3e2b77
+        nome: Ana Souza
+        data: '2026-11-03'
+        turno: manha
+        status: ok
+        criado_em: '2026-11-03T12:10:00.000Z'
+        atualizado_em: '2026-11-03T18:42:00.000Z'
+        excluido_em: null
+        versao: 3
+    NovaPessoa:
+      type: object
+      required: [id, nome, data, turno]
+      properties:
+        id: { type: string, format: uuid, description: Gerado no cliente }
+        nome: { type: string, minLength: 1, maxLength: 80 }
+        data: { type: string, format: date }
+        turno: { $ref: '#/components/schemas/Turno' }
+        status: { $ref: '#/components/schemas/Status' }
+    AlteracaoPessoa:
+      type: object
+      properties:
+        nome: { type: string, minLength: 1, maxLength: 80 }
+        data: { type: string, format: date }
+        turno: { $ref: '#/components/schemas/Turno' }
+        status: { $ref: '#/components/schemas/Status' }
+        versao: { type: integer, minimum: 1, description: Exigida ao mudar nome, data ou turno (ou use If-Match) }
+    Erro:
+      type: object
+      required: [codigo, mensagem]
+      properties:
+        codigo:
+          type: string
+          enum: [DUPLICADO, CONFLITO_VERSAO, VALIDACAO, NAO_ENCONTRADO, NAO_AUTORIZADO, METODO_NAO_PERMITIDO, MIDIA_NAO_SUPORTADA, ERRO_INTERNO]
+        mensagem: { type: string }
+        detalhes: { type: object, additionalProperties: true }
+    OperacaoSync:
+      type: object
+      required: [op, id]
+      properties:
+        op: { type: string, enum: [criar, alterar, excluir, restaurar] }
+        id: { type: string, format: uuid }
+        dados:
+          description: Obrigatório em criar e alterar
+          oneOf:
+            - { $ref: '#/components/schemas/NovaPessoa' }
+            - { $ref: '#/components/schemas/AlteracaoPessoa' }
+        versao: { type: integer, minimum: 1, description: Usada em alterar }
+    ResultadoOperacao:
+      type: object
+      required: [id, op, ok]
+      properties:
+        id: { type: string, format: uuid, nullable: true }
+        op: { type: string, nullable: true }
+        ok: { type: boolean }
+        pessoa: { $ref: '#/components/schemas/Pessoa' }
+        erro: { $ref: '#/components/schemas/Erro' }
+      description: 'Com ok true vem pessoa; com ok false vem erro (mesmos códigos das rotas individuais).'
+    RespostaLote:
+      type: object
+      required: [agora, resultados]
+      properties:
+        agora: { type: string, format: date-time }
+        resultados:
+          type: array
+          items: { $ref: '#/components/schemas/ResultadoOperacao' }
+    RespostaDelta:
+      type: object
+      required: [agora, pessoas]
+      properties:
+        agora: { type: string, format: date-time }
+        pessoas:
+          type: array
+          description: Inclui os excluídos (`excluido_em` preenchido)
+          items: { $ref: '#/components/schemas/Pessoa' }
