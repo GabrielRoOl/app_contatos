@@ -1,0 +1,12 @@
+# H2 em modo PostgreSQL. Usa a migração de db/migration/h2 (sem índice único parcial).
+spring:
+  datasource:
+    url: jdbc:h2:mem:contatos;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH;DB_CLOSE_DELAY=-1
+    username: sa
+    password: ""
+  flyway:
+    locations: classpath:db/migration/h2
+
+app:
+  token: token-de-teste-com-mais-de-trinta-e-dois-caracteres
+  cors-origin: http://localhost:5173
