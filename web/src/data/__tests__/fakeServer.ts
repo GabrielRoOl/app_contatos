@@ -52,6 +52,9 @@ export class FakeServer {
     }
     if (!atual) return erro('NAO_ENCONTRADO');
     if (o.op === 'alterar') {
+      const d = o.dados ?? {};
+      // contrato final: mudar nome/data/turno sem versão é 422; só status dispensa a versão
+      if (o.versao === undefined && ('nome' in d || 'data' in d || 'turno' in d)) return erro('VALIDACAO');
       if (o.versao !== undefined && o.versao !== atual.versao) return erro('CONFLITO_VERSAO', { atual: { ...atual } });
       const novo = { ...atual, ...o.dados };
       const dup = this.duplicado(novo);

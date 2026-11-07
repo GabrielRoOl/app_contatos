@@ -70,6 +70,23 @@ describe('escrita local e envio', () => {
     expect((await repo.list())[0]).toMatchObject({ status: 'nao', versao: 2 });
   });
 
+  it('editar nome/data/turno sempre envia a versão conhecida', async () => {
+    const p = novaPessoa(ana);
+    await repo.create(p);
+    await repo.sincronizar();
+    await repo.update(p.id, { nome: 'Ana Maria', turno: 'tarde' });
+    await repo.sincronizar();
+    expect(srv.posts[srv.posts.length - 1][0].versao).toBe(1);
+    expect(srv.pessoas.get(p.id)).toMatchObject({ nome: 'Ana Maria', turno: 'tarde', versao: 2 });
+    expect((await repo.list())[0].erro).toBeFalsy();
+    // excluir e restaurar também aumentam a versão; a edição seguinte usa a nova
+    await repo.remove(p.id);
+    await repo.restore(p.id);
+    await repo.update(p.id, { nome: 'Ana M.' });
+    await repo.sincronizar();
+    expect(srv.pessoas.get(p.id)).toMatchObject({ nome: 'Ana M.', versao: 5 });
+  });
+
   it('token errado vira nao_autorizado e preserva a fila', async () => {
     const api = new ApiClient(() => ({ url: 'http://api.test/api/v1', token: 'errado' }));
     const r = new OfflineRepository({ api, banco: `teste-${++n}` });
