@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Baixa do celular-servidor os dumps do Contatos que ainda não estão no PC.
 # Idempotente e barato: se o celular não responde, só registra e sai (o timer tenta de novo na próxima hora).
-# Destino: ~/backups-contatos (fora do repositório). Guarda os 360 mais recentes (~90 dias).
+# Destino: ~/backups-contatos (fora do repositório). Apaga o que tem mais de 90 dias (3 meses).
 set -uo pipefail
 DESTINO="${BACKUP_DESTINO:-$HOME/backups-contatos}"
 mkdir -p "$DESTINO"
@@ -28,6 +28,6 @@ for f in "$DESTINO"/contatos-*.sql.gz; do
   else log "DUMP INVALIDO: $f"; ruim=1; fi
 done
 
-ls -1t "$DESTINO"/contatos-*.sql.gz | tail -n +361 | while read -r f; do rm -f "$f" "$f.ok"; done
+find "$DESTINO" -maxdepth 1 -name 'contatos-*.sql.gz*' -mtime +90 -delete
 log "ok via $ORIGEM; ultimo: $(ls -1t "$DESTINO"/contatos-*.sql.gz | head -1 | xargs -r basename)"
 exit $ruim
