@@ -36,6 +36,8 @@ export function App() {
   const [sheet, setSheet] = useState<Sheet>(null);
   const [connectOpen, setConnectOpen] = useState(false);
   const estado = useEstadoSync(repo);
+  // a nuvem só aparece enquanto falta o token ou ele foi recusado
+  const precisaToken = estado === 'sem_config' || estado === 'nao_autorizado';
   const [toast, setToast] = useState<{ count: number; text: string } | null>(null);
   const [undo, setUndo] = useState<Pessoa | null>(null);
   const { collapsed, setCollapsed, onScroll } = useCollapseOnScroll();
@@ -143,10 +145,12 @@ export function App() {
             <p className="header__summary">{summary}</p>
           </div>
           <div className="header__actions">
-            <button type="button" className="icon-btn icon-btn--filled" onClick={() => setConnectOpen(true)}
-              aria-label="Conexão com a API">
-              <IconCloud size={20} />
-            </button>
+            {precisaToken && (
+              <button type="button" className="icon-btn icon-btn--filled" onClick={() => setConnectOpen(true)}
+                aria-label="Conectar ao backup">
+                <IconCloud size={20} />
+              </button>
+            )}
             <button type="button" className="btn-add" onClick={() => setSheet({ mode: 'add' })}>
               <IconPlus /> Adicionar
             </button>
