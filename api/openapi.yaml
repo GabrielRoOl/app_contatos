@@ -6,7 +6,7 @@ info:
     API de um único usuário para registrar pessoas por data e turno.
     JSON em snake_case. Datas de calendário são `YYYY-MM-DD`. Timestamps em UTC com
     milissegundos fixos (`2026-11-03T12:10:00.000Z`).
-    Todas as rotas exigem `Authorization: Bearer <token>`, exceto requisições OPTIONS (CORS).
+    Todas as rotas exigem `Authorization: Bearer <token>`, exceto requisições OPTIONS (CORS) e `GET /saude`.
 servers:
   - url: http://localhost:3333/api/v1
 security:
@@ -14,8 +14,31 @@ security:
 tags:
   - name: pessoas
   - name: sync
+  - name: saude
 
 paths:
+  /saude:
+    get:
+      tags: [saude]
+      summary: Verifica se a API e o banco respondem
+      description: |
+        Pública: não exige token. Confirma o banco com um `SELECT 1`. A resposta nunca traz dados de
+        pessoas, versão nem detalhes do erro. Também aceita HEAD. Nunca fica em cache.
+      security: []
+      responses:
+        '200':
+          description: API e banco respondendo
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Saude' }
+              example: { status: ok }
+        '503':
+          description: API no ar, mas o banco não respondeu
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Saude' }
+              example: { status: indisponivel }
+
   /pessoas:
     get:
       tags: [pessoas]
@@ -302,6 +325,11 @@ components:
         turno: { $ref: '#/components/schemas/Turno' }
         status: { $ref: '#/components/schemas/Status' }
         versao: { type: integer, minimum: 1, description: Exigida ao mudar nome, data ou turno (ou use If-Match) }
+    Saude:
+      type: object
+      required: [status]
+      properties:
+        status: { type: string, enum: [ok, indisponivel] }
     Erro:
       type: object
       required: [codigo, mensagem]

@@ -8,6 +8,9 @@ spring:
     url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB:contatos}
     username: ${POSTGRES_USER:contatos}
     password: ${POSTGRES_PASSWORD:}
+    hikari:
+      # Falha rápido com o banco fora do ar (a verificação de saúde devolve 503 em vez de pendurar).
+      connection-timeout: 5000
   jackson:
     property-naming-strategy: SNAKE_CASE
     deserialization:

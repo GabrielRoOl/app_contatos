@@ -1,6 +1,7 @@
 package br.com.gabriel.contatos.seguranca;
 
 import br.com.gabriel.contatos.erro.ErroApi;
+import br.com.gabriel.contatos.web.SaudeController;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -14,7 +15,10 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-/** Exige Authorization: Bearer com o token do ambiente. Requisições OPTIONS passam sem token. */
+/**
+ * Exige Authorization: Bearer com o token do ambiente. Passam sem token: requisições OPTIONS (CORS)
+ * e a verificação de saúde (GET /api/v1/saude).
+ */
 public class AuthFilter extends OncePerRequestFilter {
 
     private static final String PREFIXO = "bearer ";
@@ -30,7 +34,8 @@ public class AuthFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest req, HttpServletResponse res, FilterChain chain)
             throws ServletException, IOException {
-        if ("OPTIONS".equalsIgnoreCase(req.getMethod()) || tokenValido(req.getHeader(HttpHeaders.AUTHORIZATION))) {
+        if ("OPTIONS".equalsIgnoreCase(req.getMethod()) || rotaDeSaude(req)
+                || tokenValido(req.getHeader(HttpHeaders.AUTHORIZATION))) {
             chain.doFilter(req, res);
             return;
         }
@@ -40,6 +45,13 @@ public class AuthFilter extends OncePerRequestFilter {
         res.setCharacterEncoding(StandardCharsets.UTF_8.name());
         mapper.writeValue(res.getOutputStream(),
                 new ErroApi("NAO_AUTORIZADO", "Token ausente ou inválido.", null));
+    }
+
+    /** Única rota pública além do OPTIONS: GET (ou HEAD) exatamente em /api/v1/saude. */
+    private static boolean rotaDeSaude(HttpServletRequest req) {
+        String metodo = req.getMethod();
+        return ("GET".equalsIgnoreCase(metodo) || "HEAD".equalsIgnoreCase(metodo))
+                && SaudeController.CAMINHO.equals(req.getRequestURI());
     }
 
     /** Compara os hashes dos dois tokens em tempo constante (sem vazar o tamanho). */
