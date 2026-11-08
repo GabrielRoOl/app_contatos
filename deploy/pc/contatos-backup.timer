@@ -1,0 +1,11 @@
+[Unit]
+Description=Backup do App Contatos a cada hora (recupera execuções perdidas com o PC desligado)
+
+[Timer]
+OnStartupSec=3min
+OnCalendar=hourly
+Persistent=true
+RandomizedDelaySec=120
+
+[Install]
+WantedBy=timers.target

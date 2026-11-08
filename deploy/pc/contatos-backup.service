@@ -1,0 +1,6 @@
+[Unit]
+Description=Baixa os backups do App Contatos do celular-servidor
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/contatos-baixar-backup
