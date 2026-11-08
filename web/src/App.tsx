@@ -40,7 +40,7 @@ export function App() {
   const precisaToken = estado === 'sem_config' || estado === 'nao_autorizado';
   const [toast, setToast] = useState<{ count: number; text: string } | null>(null);
   const [undo, setUndo] = useState<Pessoa | null>(null);
-  const { collapsed, setCollapsed, onScroll } = useCollapseOnScroll();
+  const { collapsed, setCollapsed, onScroll, headerRef } = useCollapseOnScroll();
   const timers = useRef<{ toast?: number; undo?: number }>({});
 
   useEffect(() => () => { clearTimeout(timers.current.toast); clearTimeout(timers.current.undo); }, []);
@@ -138,7 +138,7 @@ export function App() {
 
   return (
     <div className="app">
-      <header className={`header ${collapsed ? 'is-collapsed' : ''}`}>
+      <header ref={headerRef} className={`header ${collapsed ? 'is-collapsed' : ''}`}>
         <div className="header__top">
           <div>
             <h1>Contatos</h1>
