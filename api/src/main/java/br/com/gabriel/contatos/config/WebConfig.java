@@ -1,6 +1,7 @@
 package br.com.gabriel.contatos.config;
 
 import br.com.gabriel.contatos.seguranca.AuthFilter;
+import br.com.gabriel.contatos.seguranca.LimitadorDeTentativas;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -8,11 +9,14 @@ import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.ser.std.StdSerializer;
 import java.io.IOException;
+import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -56,8 +60,15 @@ public class WebConfig {
     }
 
     @Bean
-    FilterRegistrationBean<AuthFilter> filtroAuth(AppProperties props, ObjectMapper mapper) {
-        var registro = new FilterRegistrationBean<>(new AuthFilter(props.token(), mapper));
+    FilterRegistrationBean<AuthFilter> filtroAuth(
+            AppProperties props,
+            ObjectMapper mapper,
+            Clock relogio,
+            @Value("${app.tentativas-maximas:5}") int tentativasMaximas,
+            @Value("${app.bloqueio-minutos:10}") int bloqueioMinutos,
+            @Value("${app.cabecalho-ip-cliente:}") String cabecalhoIp) {
+        var limitador = new LimitadorDeTentativas(tentativasMaximas, Duration.ofMinutes(bloqueioMinutos), relogio);
+        var registro = new FilterRegistrationBean<>(new AuthFilter(props.token(), mapper, limitador, cabecalhoIp));
         registro.setOrder(Ordered.HIGHEST_PRECEDENCE + 20);
         return registro;
     }

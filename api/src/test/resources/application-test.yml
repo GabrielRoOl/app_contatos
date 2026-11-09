@@ -10,3 +10,5 @@ spring:
 app:
   token: token-de-teste-com-mais-de-trinta-e-dois-caracteres
   cors-origin: http://localhost:5173
+  # Alto de propósito: os testes mandam vários tokens errados do mesmo IP. O bloqueio é testado em BloqueioApiTest.
+  tentativas-maximas: 1000

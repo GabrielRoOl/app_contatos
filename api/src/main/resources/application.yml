@@ -25,6 +25,8 @@ spring:
     locations: classpath:db/migration/postgres
 
 server:
+  # Só o proxy (nginx) acessa a API. Para testar pela rede local, defina SERVER_ADDRESS=0.0.0.0.
+  address: ${SERVER_ADDRESS:127.0.0.1}
   port: ${PORT:3333}
   shutdown: graceful
 
@@ -33,3 +35,8 @@ app:
   cors-origin: ${CORS_ORIGIN:http://localhost:5173}
   retencao-excluidos-dias: 30
   limpeza-cron: "0 30 3 * * *"
+  # Bloqueio por token errado: após N erros do mesmo IP, 429 por M minutos (vale até com o token certo).
+  tentativas-maximas: 5
+  bloqueio-minutos: 10
+  # Cabeçalho com o IP real do cliente, definido (sobrescrito) pelo proxy. Vazio = IP da conexão.
+  cabecalho-ip-cliente: ${CLIENT_IP_HEADER:}
