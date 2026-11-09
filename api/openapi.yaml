@@ -1,4 +1,32 @@
+# =============================================================================
+# CONTRATO DA API (OpenAPI 3.0)
+#
+# Este arquivo descreve a API em formato legível por máquina: cada rota, o que
+# ela recebe, o que devolve e quais erros pode dar. O front usa como referência
+# (e para gerar um servidor falso ou tipos TypeScript); ferramentas como o
+# Swagger UI (https://editor.swagger.io, basta colar este texto) montam uma
+# documentação navegável a partir dele.
+#
+# GUIA RÁPIDO DE LEITURA DO YAML
+#   - Indentação (2 espaços) define o aninhamento. Nunca use TAB.
+#   - "chave: valor" é um campo. "- item" é um item de lista.
+#   - { a: 1, b: 2 } é um objeto escrito em uma linha; [x, y] é uma lista em uma linha.
+#   - Linhas começando com # são comentários e não afetam nada.
+#   - "|" depois de "description:" significa texto de várias linhas.
+#   - "$ref: '#/components/...'" é um atalho: "use a definição que está lá embaixo,
+#     na seção components". Evita repetir a mesma estrutura em várias rotas.
+#
+# ESTRUTURA DO ARQUIVO
+#   info / servers / security / tags  -> cabeçalho geral
+#   paths                              -> as rotas (o que a API faz)
+#   components                         -> peças reutilizadas pelas rotas:
+#                                         parameters, responses e schemas
+# =============================================================================
+
+# Versão da especificação OpenAPI usada (não é a versão da API).
 openapi: 3.0.3
+
+# Identificação da API. "version" é a versão do contrato, não do servidor.
 info:
   title: App Contatos API
   version: 0.1.0
@@ -7,16 +35,34 @@ info:
     JSON em snake_case. Datas de calendário são `YYYY-MM-DD`. Timestamps em UTC com
     milissegundos fixos (`2026-11-03T12:10:00.000Z`).
     Todas as rotas exigem `Authorization: Bearer <token>`, exceto requisições OPTIONS (CORS) e `GET /saude`.
+    Cinco tokens inválidos seguidos do mesmo IP bloqueiam esse IP por 10 minutos (429 `MUITAS_TENTATIVAS`).
+
+# Endereço base. Todas as rotas abaixo são relativas a ele
+# (ex.: "/pessoas" vira http://localhost:3333/api/v1/pessoas).
 servers:
   - url: http://localhost:3333/api/v1
+
+# Autenticação aplicada a TODAS as rotas por padrão.
+# "bearerAuth" é definido em components > securitySchemes, mais abaixo.
 security:
   - bearerAuth: []
+
+# Grupos usados só para organizar a documentação (aparecem como seções no Swagger).
 tags:
   - name: pessoas
   - name: sync
   - name: saude
 
+# =============================================================================
+# ROTAS
+# Cada bloco abaixo é um caminho (URL). Dentro dele, o método HTTP (get, post,
+# patch, delete) diz a ação. "responses" lista cada código HTTP possível.
+# =============================================================================
 paths:
+
+  # ---------------------------------------------------------------------------
+  # /saude  ->  verificação de saúde para scripts e monitores (única rota SEM token)
+  # ---------------------------------------------------------------------------
   /saude:
     get:
       tags: [saude]
@@ -24,6 +70,7 @@ paths:
       description: |
         Pública: não exige token. Confirma o banco com um `SELECT 1`. A resposta nunca traz dados de
         pessoas, versão nem detalhes do erro. Também aceita HEAD. Nunca fica em cache.
+      # "security: []" desliga, só nesta rota, a exigência de token definida no topo do arquivo.
       security: []
       responses:
         '200':
@@ -39,19 +86,23 @@ paths:
               schema: { $ref: '#/components/schemas/Saude' }
               example: { status: indisponivel }
 
+  # ---------------------------------------------------------------------------
+  # /pessoas  ->  listar (GET) e criar (POST)
+  # ---------------------------------------------------------------------------
   /pessoas:
     get:
       tags: [pessoas]
       summary: Lista as pessoas não excluídas
       description: Ordem por data, turno (manha antes de tarde), criado_em. Todos os filtros são opcionais e o período é inclusivo.
+      # Parâmetros de query string: /pessoas?de=2026-11-01&ate=2026-11-30&status=ok
       parameters:
-        - name: de
+        - name: de            # data inicial do período (inclusiva)
+          in: query           # "in" diz onde o parâmetro vai: query (?x=), path (/x/) ou header
+          schema: { type: string, format: date }
+        - name: ate           # data final do período (inclusiva)
           in: query
           schema: { type: string, format: date }
-        - name: ate
-          in: query
-          schema: { type: string, format: date }
-        - name: status
+        - name: status        # ok = foi, nao = não foi, pendente = sem marcação
           in: query
           schema: { type: string, enum: [ok, nao, pendente] }
       responses:
@@ -62,7 +113,9 @@ paths:
               schema:
                 type: array
                 items: { $ref: '#/components/schemas/Pessoa' }
+        # Os erros reaproveitam respostas prontas de components > responses.
         '401': { $ref: '#/components/responses/NaoAutorizado' }
+        '429': { $ref: '#/components/responses/MuitasTentativas' }
         '422': { $ref: '#/components/responses/Validacao' }
     post:
       tags: [pessoas]
@@ -71,11 +124,13 @@ paths:
         201 ao criar. 200 se o mesmo `id` já existir com o mesmo conteúdo (nome, data, turno e status).
         Mesmo `id` com conteúdo diferente: 409 `CONFLITO_VERSAO` com o registro do servidor em `detalhes.atual`.
         Fere a unicidade (nome normalizado + data + turno entre ativos): 409 `DUPLICADO`.
+      # Corpo da requisição (JSON enviado pelo cliente).
       requestBody:
         required: true
         content:
           application/json:
             schema: { $ref: '#/components/schemas/NovaPessoa' }
+            # "example" é só ilustração para a documentação; não é regra.
             example: { id: 6f1c2e0a-8d4b-4b8e-9a51-1f0c9d3e2b77, nome: Ana Souza, data: '2026-11-03', turno: manha }
       responses:
         '201':
@@ -89,10 +144,16 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Pessoa' }
         '401': { $ref: '#/components/responses/NaoAutorizado' }
+        '429': { $ref: '#/components/responses/MuitasTentativas' }
         '409': { $ref: '#/components/responses/Conflito' }
         '422': { $ref: '#/components/responses/Validacao' }
 
+  # ---------------------------------------------------------------------------
+  # /pessoas/{id}  ->  alterar (PATCH) e excluir (DELETE)
+  # {id} entre chaves é uma variável da URL: /pessoas/6f1c2e0a-...
+  # ---------------------------------------------------------------------------
   /pessoas/{id}:
+    # "parameters" no nível do caminho vale para todos os métodos abaixo (patch e delete).
     parameters:
       - $ref: '#/components/parameters/Id'
     patch:
@@ -106,6 +167,7 @@ paths:
         Sem mudança real, devolve o registro sem incrementar `versao`.
         Registro excluído ou inexistente: 404.
       parameters:
+        # Cabeçalho HTTP opcional: outra forma de mandar a versão, em vez de usar o corpo.
         - name: If-Match
           in: header
           required: false
@@ -124,6 +186,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Pessoa' }
         '401': { $ref: '#/components/responses/NaoAutorizado' }
+        '429': { $ref: '#/components/responses/MuitasTentativas' }
         '404': { $ref: '#/components/responses/NaoEncontrado' }
         '409': { $ref: '#/components/responses/Conflito' }
         '422': { $ref: '#/components/responses/Validacao' }
@@ -138,8 +201,12 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Pessoa' }
         '401': { $ref: '#/components/responses/NaoAutorizado' }
+        '429': { $ref: '#/components/responses/MuitasTentativas' }
         '404': { $ref: '#/components/responses/NaoEncontrado' }
 
+  # ---------------------------------------------------------------------------
+  # /pessoas/{id}/restaurar  ->  desfazer exclusão (usado pelo "Desfazer" de 5 s)
+  # ---------------------------------------------------------------------------
   /pessoas/{id}/restaurar:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -154,13 +221,20 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Pessoa' }
         '401': { $ref: '#/components/responses/NaoAutorizado' }
+        '429': { $ref: '#/components/responses/MuitasTentativas' }
         '404': { $ref: '#/components/responses/NaoEncontrado' }
+        # Aqui o 409 é sempre DUPLICADO (outra pessoa igual já ocupa o lugar), por isso
+        # não reaproveita a resposta genérica "Conflito".
         '409':
           description: Já existe outra pessoa ativa igual (`DUPLICADO`)
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Erro' }
 
+  # ---------------------------------------------------------------------------
+  # /sync  ->  sincronização com o cache offline do celular
+  # Fluxo: o app envia a fila acumulada (POST) e depois busca o que mudou (GET).
+  # ---------------------------------------------------------------------------
   /sync:
     get:
       tags: [sync]
@@ -181,6 +255,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/RespostaDelta' }
         '401': { $ref: '#/components/responses/NaoAutorizado' }
+        '429': { $ref: '#/components/responses/MuitasTentativas' }
         '422': { $ref: '#/components/responses/Validacao' }
     post:
       tags: [sync]
@@ -196,9 +271,10 @@ paths:
         content:
           application/json:
             schema:
-              type: array
+              type: array          # o corpo é uma lista de operações, não um objeto
               maxItems: 500
               items: { $ref: '#/components/schemas/OperacaoSync' }
+            # Exemplo: cria, marca como "foi" e exclui a mesma pessoa, nessa ordem.
             example:
               - { op: criar, id: 6f1c2e0a-8d4b-4b8e-9a51-1f0c9d3e2b77, dados: { nome: Ana Souza, data: '2026-11-03', turno: manha } }
               - { op: alterar, id: 6f1c2e0a-8d4b-4b8e-9a51-1f0c9d3e2b77, versao: 1, dados: { status: ok } }
@@ -210,21 +286,31 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/RespostaLote' }
         '401': { $ref: '#/components/responses/NaoAutorizado' }
+        '429': { $ref: '#/components/responses/MuitasTentativas' }
         '422': { $ref: '#/components/responses/Validacao' }
 
+# =============================================================================
+# COMPONENTES REUTILIZÁVEIS
+# Nada aqui vale sozinho: só passa a valer quando uma rota aponta para cá com
+# "$ref". Definir uma vez e referenciar evita inconsistência entre as rotas.
+# =============================================================================
 components:
+
+  # Como a API se autentica. "http + bearer" = cabeçalho "Authorization: Bearer <token>".
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
 
+  # Parâmetros reaproveitados por mais de uma rota.
   parameters:
     Id:
       name: id
-      in: path
+      in: path               # vem na própria URL: /pessoas/{id}
       required: true
       schema: { type: string, format: uuid }
 
+  # Respostas de erro prontas. Todas usam o formato { codigo, mensagem, detalhes? }.
   responses:
     NaoAutorizado:
       description: Token ausente ou inválido (`NAO_AUTORIZADO`)
@@ -232,6 +318,22 @@ components:
         application/json:
           schema: { $ref: '#/components/schemas/Erro' }
           example: { codigo: NAO_AUTORIZADO, mensagem: Token ausente ou inválido. }
+    MuitasTentativas:
+      description: |
+        Muitos tokens inválidos vindos do mesmo IP (`MUITAS_TENTATIVAS`): 5 erros bloqueiam o IP por 10 minutos.
+        Durante o bloqueio, qualquer rota protegida responde 429, até com o token certo.
+        O cabeçalho `Retry-After` e `detalhes.tentar_novamente_em_segundos` dizem quanto falta.
+      headers:
+        Retry-After:
+          description: Segundos até o bloqueio acabar
+          schema: { type: integer }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Erro' }
+          example:
+            codigo: MUITAS_TENTATIVAS
+            mensagem: Muitas tentativas com token inválido. Tente de novo em 10 min.
+            detalhes: { tentar_novamente_em_segundos: 600 }
     NaoEncontrado:
       description: O id não existe, ou o registro está excluído em alteração (`NAO_ENCONTRADO`)
       content:
@@ -253,6 +355,7 @@ components:
       content:
         application/json:
           schema: { $ref: '#/components/schemas/Erro' }
+          # "examples" (plural) mostra mais de um exemplo, um para cada tipo de conflito.
           examples:
             duplicado:
               value:
@@ -276,28 +379,40 @@ components:
                     excluido_em: null
                     versao: 3
 
+  # ---------------------------------------------------------------------------
+  # SCHEMAS: o "formato" dos dados (equivalente a tipos/classes).
+  # Palavras úteis: type (string, integer, boolean, object, array), enum (lista
+  # fechada de valores), required (campos obrigatórios), nullable (aceita null),
+  # format (refinamento: date, date-time, uuid), minLength/maxLength (tamanho).
+  # ---------------------------------------------------------------------------
   schemas:
+
+    # Valores permitidos para o turno. Qualquer outro valor dá 422.
     Turno:
       type: string
       enum: [manha, tarde]
+
+    # Valores permitidos para o status. "nullable" permite null, que significa pendente.
     Status:
       type: string
       nullable: true
       enum: [ok, nao]
       description: null = pendente
+
+    # A pessoa como a API SEMPRE devolve (todos os campos presentes).
     Pessoa:
       type: object
       required: [id, nome, data, turno, status, criado_em, atualizado_em, excluido_em, versao]
       properties:
         id: { type: string, format: uuid }
         nome: { type: string, minLength: 1, maxLength: 80, description: Sem espaços nas pontas e com espaços internos colapsados }
-        data: { type: string, format: date }
+        data: { type: string, format: date }                   # YYYY-MM-DD, sem hora
         turno: { $ref: '#/components/schemas/Turno' }
         status: { $ref: '#/components/schemas/Status' }
-        criado_em: { type: string, format: date-time }
-        atualizado_em: { type: string, format: date-time }
-        excluido_em: { type: string, format: date-time, nullable: true }
-        versao: { type: integer, minimum: 1 }
+        criado_em: { type: string, format: date-time }         # UTC, definido pelo servidor
+        atualizado_em: { type: string, format: date-time }     # UTC, muda a cada alteração
+        excluido_em: { type: string, format: date-time, nullable: true }   # null = ativa
+        versao: { type: integer, minimum: 1 }                  # começa em 1, +1 a cada mudança real
       example:
         id: 6f1c2e0a-8d4b-4b8e-9a51-1f0c9d3e2b77
         nome: Ana Souza
@@ -308,15 +423,21 @@ components:
         atualizado_em: '2026-11-03T18:42:00.000Z'
         excluido_em: null
         versao: 3
+
+    # Corpo do POST /pessoas: só o que o cliente envia.
+    # criado_em, atualizado_em, excluido_em e versao são do servidor e não entram aqui.
     NovaPessoa:
       type: object
-      required: [id, nome, data, turno]
+      required: [id, nome, data, turno]      # status é opcional (ausente = pendente)
       properties:
         id: { type: string, format: uuid, description: Gerado no cliente }
         nome: { type: string, minLength: 1, maxLength: 80 }
         data: { type: string, format: date }
         turno: { $ref: '#/components/schemas/Turno' }
         status: { $ref: '#/components/schemas/Status' }
+
+    # Corpo do PATCH: sem "required", então todos os campos são opcionais.
+    # Campo ausente = não mexe. status: null = volta para pendente.
     AlteracaoPessoa:
       type: object
       properties:
@@ -325,20 +446,26 @@ components:
         turno: { $ref: '#/components/schemas/Turno' }
         status: { $ref: '#/components/schemas/Status' }
         versao: { type: integer, minimum: 1, description: Exigida ao mudar nome, data ou turno (ou use If-Match) }
+
+    # Resposta de GET /saude. Não usa o formato Erro, de propósito: é para monitores, não para o front.
     Saude:
       type: object
       required: [status]
       properties:
         status: { type: string, enum: [ok, indisponivel] }
+
+    # Formato único de todos os erros da API.
     Erro:
       type: object
       required: [codigo, mensagem]
       properties:
-        codigo:
+        codigo:                  # o front decide o que fazer olhando este campo, não a mensagem
           type: string
-          enum: [DUPLICADO, CONFLITO_VERSAO, VALIDACAO, NAO_ENCONTRADO, NAO_AUTORIZADO, METODO_NAO_PERMITIDO, MIDIA_NAO_SUPORTADA, ERRO_INTERNO]
-        mensagem: { type: string }
-        detalhes: { type: object, additionalProperties: true }
+          enum: [DUPLICADO, CONFLITO_VERSAO, VALIDACAO, NAO_ENCONTRADO, NAO_AUTORIZADO, MUITAS_TENTATIVAS, METODO_NAO_PERMITIDO, MIDIA_NAO_SUPORTADA, ERRO_INTERNO]
+        mensagem: { type: string }       # texto em português, pronto para mostrar ao usuário
+        detalhes: { type: object, additionalProperties: true }   # extras que variam por código
+
+    # Uma operação da fila offline, enviada em POST /sync.
     OperacaoSync:
       type: object
       required: [op, id]
@@ -347,10 +474,13 @@ components:
         id: { type: string, format: uuid }
         dados:
           description: Obrigatório em criar e alterar
+          # oneOf = "é um destes formatos": NovaPessoa (criar) ou AlteracaoPessoa (alterar).
           oneOf:
             - { $ref: '#/components/schemas/NovaPessoa' }
             - { $ref: '#/components/schemas/AlteracaoPessoa' }
         versao: { type: integer, minimum: 1, description: Usada em alterar }
+
+    # Resultado de UMA operação do lote: deu certo (ok true + pessoa) ou falhou (ok false + erro).
     ResultadoOperacao:
       type: object
       required: [id, op, ok]
@@ -361,19 +491,23 @@ components:
         pessoa: { $ref: '#/components/schemas/Pessoa' }
         erro: { $ref: '#/components/schemas/Erro' }
       description: 'Com ok true vem pessoa; com ok false vem erro (mesmos códigos das rotas individuais).'
+
+    # Resposta de POST /sync.
     RespostaLote:
       type: object
       required: [agora, resultados]
       properties:
-        agora: { type: string, format: date-time }
+        agora: { type: string, format: date-time }   # guarde como próximo "desde"
         resultados:
           type: array
-          items: { $ref: '#/components/schemas/ResultadoOperacao' }
+          items: { $ref: '#/components/schemas/ResultadoOperacao' }   # mesma ordem do envio
+
+    # Resposta de GET /sync.
     RespostaDelta:
       type: object
       required: [agora, pessoas]
       properties:
-        agora: { type: string, format: date-time }
+        agora: { type: string, format: date-time }   # guarde como próximo "desde"
         pessoas:
           type: array
           description: Inclui os excluídos (`excluido_em` preenchido)
