@@ -7,9 +7,10 @@ import { PeriodFilter } from './components/PeriodFilter';
 import { PersonSheet } from './components/PersonSheet';
 import { StatusChips } from './components/StatusChips';
 import { ViewSwitch } from './components/ViewSwitch';
-import { IconChevronDown, IconCloud, IconPlus, IconSliders } from './components/icons';
+import { IconChevronDown, IconPlus, IconSliders } from './components/icons';
 import { OfflineRepository } from './data/offlineRepository';
 import { useCollapseOnScroll } from './hooks/useCollapseOnScroll';
+import { useBloqueado } from './hooks/useAcesso';
 import { useEstadoSync } from './hooks/useEstadoSync';
 import { usePessoas } from './hooks/usePessoas';
 import { parseBR, shortBR, today } from './lib/dates';
@@ -34,10 +35,8 @@ export function App() {
   const [rTo, setRTo] = useState('');
   const [periodOpen, setPeriodOpen] = useState(false);
   const [sheet, setSheet] = useState<Sheet>(null);
-  const [connectOpen, setConnectOpen] = useState(false);
   const estado = useEstadoSync(repo);
-  // a nuvem só aparece enquanto falta o token ou ele foi recusado
-  const precisaToken = estado === 'sem_config' || estado === 'nao_autorizado';
+  const bloqueado = useBloqueado(estado);
   const [toast, setToast] = useState<{ count: number; text: string } | null>(null);
   const [undo, setUndo] = useState<Pessoa | null>(null);
   const { collapsed, setCollapsed, onScroll, headerRef } = useCollapseOnScroll();
@@ -45,10 +44,6 @@ export function App() {
 
   useEffect(() => () => { clearTimeout(timers.current.toast); clearTimeout(timers.current.undo); }, []);
   useEffect(() => repo.start(), []);
-  // sem URL/token, ou token recusado: abre a tela de conectar (uma vez por mudança de estado)
-  useEffect(() => {
-    if (estado === 'sem_config' || estado === 'nao_autorizado') setConnectOpen(true);
-  }, [estado]);
   useEffect(() => {
     if (!aviso) return;
     const t = window.setTimeout(limparAviso, 6000);
@@ -136,6 +131,9 @@ export function App() {
     : statusF !== 'todos' && inRange.length ? 'Ninguém com esse resultado' : 'Ninguém nesse período';
   const emptyText = !pessoas.length ? 'Toque em Adicionar para começar a lista.' : 'Ajuste os filtros ou toque em Todos.';
 
+  // sem token, ou token recusado: só a tela de conectar. Os dados locais e a fila ficam intactos.
+  if (bloqueado) return <div className="app"><ConnectSheet estado={estado} /></div>;
+
   return (
     <div className="app">
       <header ref={headerRef} className={`header ${collapsed ? 'is-collapsed' : ''}`}>
@@ -145,12 +143,6 @@ export function App() {
             <p className="header__summary">{summary}</p>
           </div>
           <div className="header__actions">
-            {precisaToken && (
-              <button type="button" className="icon-btn icon-btn--filled" onClick={() => setConnectOpen(true)}
-                aria-label="Conectar ao backup">
-                <IconCloud size={20} />
-              </button>
-            )}
             <button type="button" className="btn-add" onClick={() => setSheet({ mode: 'add' })}>
               <IconPlus /> Adicionar
             </button>
@@ -194,8 +186,6 @@ export function App() {
 
       {aviso ? <AlertNotice message={aviso} /> : toast && <CopiedToast count={toast.count} text={toast.text} />}
       {!aviso && !toast && undo && <UndoSnackbar message={`Excluiu ${undo.nome}`} onUndo={handleUndo} />}
-
-      {connectOpen && <ConnectSheet estado={estado} onClose={() => setConnectOpen(false)} />}
 
       {sheet && (
         <PersonSheet

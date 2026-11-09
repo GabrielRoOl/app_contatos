@@ -196,6 +196,10 @@ h1, h2, p { margin: 0; }
   font-size: 14px; font-weight: 800; color: #fff; background: var(--c2);
 }
 
+/* ---------- bloqueio: tela de conectar ---------- */
+.lock { position: absolute; inset: 0; z-index: 20; display: flex; flex-direction: column; justify-content: center; padding: 0 var(--gutter); background: var(--c5); }
+.lock__form { display: flex; flex-direction: column; gap: 16px; }
+
 /* ---------- painel inferior ---------- */
 .overlay { position: absolute; inset: 0; z-index: 10; display: flex; flex-direction: column; justify-content: flex-end; background: var(--overlay); }
 .sheet {
